@@ -30,6 +30,7 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Interactive weather and air quality visual/i })).toBeVisible();
     await expect(page.getByText(/All-India Live Weather & Public CPCB AQI Feed \(32 Cities\)/i)).toBeVisible();
+    await expect(page.getByRole('img', { name: /Interactive India air quality map/i })).toBeVisible();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
 
@@ -55,9 +56,10 @@ test.describe('AirKin End-to-End Verification', () => {
       .boundingBox();
     expect(Math.abs((chartBoxAfter?.height ?? 0) - (chartBoxBefore?.height ?? 0))).toBeLessThan(2);
 
-    // 5. Navigate to Page 2: Household & Impact Simulator
+    // 5. Navigate to Page 2: Household & Impact Simulator + Commute Hour Slider
     await page.getByRole('button', { name: /Household & Impact Simulator/i }).click();
     await expect(page.locator('aside[aria-label="Household and Lifestyle Profile"]')).toBeVisible();
+    await expect(page.getByText(/Commute & School-Run Hour Exposure/i)).toBeVisible();
     await expect(page.getByText(/Community Multiplier \(25 homes\)/i)).toBeVisible();
     await page.getByRole('button', { name: 'Community', exact: true }).click();
     await expect(page.getByText(/Community Multiplier \(100 homes\)/i)).toBeVisible();
@@ -67,9 +69,11 @@ test.describe('AirKin End-to-End Verification', () => {
     await page.getByRole('button', { name: /Organize No-Idling School Zones/i }).click();
     expect(await countBadge.innerText()).not.toBe(beforeCountText);
 
-    // 6. Navigate to Page 3: Community & Guide
+    // 6. Navigate to Page 3: Community & Guide + Hindi Alert Toggle
     await page.getByRole('button', { name: /Community & Guide/i }).click();
     await expect(page.getByRole('heading', { name: /RWA & School-Group Clean-Air Briefing/i })).toBeVisible();
+    await page.getByRole('button', { name: 'हिंदी', exact: true }).click();
+    await expect(page.getByText(/मोहल्ला स्वच्छ-हवा अलर्ट/i)).toBeVisible();
 
     // 7. Open Hovering Ask AirKin Coach button & run live Gemini chat
     await page.getByRole('button', { name: /Open Ask AirKin Coach/i }).click();

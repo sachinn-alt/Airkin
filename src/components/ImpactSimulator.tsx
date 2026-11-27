@@ -10,13 +10,14 @@ import {
   Home,
 } from 'react-iconly';
 import { ACTION_CATALOG, WHO_PM25_24H_GUIDELINE } from '@shared/impactEngine';
-import type { ChoiceCategory, ImpactSummary } from '@shared/types';
+import type { ChoiceCategory, HourlyAqiPoint, ImpactSummary } from '@shared/types';
 import { AnimatedCounter, SpotlightCard } from './ui/AceternityPrimitives';
 
 interface ImpactSimulatorProps {
   selectedActionIds: string[];
   onToggleAction: (id: string) => void;
   impact: ImpactSummary;
+  hourly?: HourlyAqiPoint[];
 }
 
 const CATEGORY_META: Record<
@@ -33,9 +34,11 @@ export function ImpactSimulator({
   selectedActionIds,
   onToggleAction,
   impact,
+  hourly = [],
 }: ImpactSimulatorProps) {
   const [expandedInfoId, setExpandedInfoId] = useState<string | null>(null);
   const [blockSliderHomes, setBlockSliderHomes] = useState<number | null>(null);
+  const [leaveHour, setLeaveHour] = useState(8);
 
   const effectiveHomes = blockSliderHomes ?? impact.communityBlockMultiplier.households;
   const scaledPm25Kg = Number(
@@ -44,6 +47,20 @@ export function ImpactSimulator({
   const scaledCo2eTonnes = Number(
     ((impact.weeklyCo2eSavedKg * 14 * effectiveHomes) / 1000).toFixed(1)
   );
+
+  const selectedHourPoint = hourly[leaveHour] ?? null;
+  const safestHourPoint = hourly.length
+    ? hourly.reduce((min, pt) => (pt.pm25 < min.pm25 ? pt : min), hourly[0])
+    : null;
+  const commuteShiftSavingsPct =
+    selectedHourPoint && safestHourPoint && selectedHourPoint.pm25 > 0
+      ? Math.max(
+          0,
+          Math.round(
+            ((selectedHourPoint.pm25 - safestHourPoint.pm25) / selectedHourPoint.pm25) * 100
+          )
+        )
+      : 0;
 
   const maxBar = Math.max(40, impact.outdoorPm25, impact.baselineIndoorPm25);
   const pctOf = (val: number) => Math.min(100, Math.max(4, Math.round((val / maxBar) * 100)));
@@ -181,6 +198,48 @@ export function ImpactSimulator({
           </div>
         </SpotlightCard>
       </div>
+
+      {/* Interactive School-Run & Commute Hour Explorer */}
+      {hourly.length > 0 && selectedHourPoint && safestHourPoint && (
+        <SpotlightCard className="p-3.5" contentClassName="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900">
+              <TimeCircle set="two-tone" size="small" primaryColor="#0369a1" />
+              Commute & School-Run Hour Exposure ({String(leaveHour).padStart(2, '0')}:00)
+            </span>
+            <div className="flex items-center gap-2 text-[11px]">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-900">
+                {selectedHourPoint.pm25} µg/m³ outdoor
+              </span>
+              <span className="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 font-semibold text-teal-900">
+                {commuteShiftSavingsPct > 0
+                  ? `Shift to ${safestHourPoint.hourLabel} saves ${commuteShiftSavingsPct}%`
+                  : 'Optimal hour selected'}
+              </span>
+            </div>
+          </div>
+
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0, hourly.length - 1)}
+            value={leaveHour}
+            onChange={(e) => setLeaveHour(Number(e.target.value))}
+            aria-label="Select commute or school-run departure hour"
+            className="w-full accent-sky-700 cursor-pointer"
+          />
+
+          <div className="flex justify-between text-[10px] text-slate-500">
+            <span>00:00 Midnight</span>
+            <span>
+              {selectedHourPoint.pm25 > 55
+                ? 'N95 / KF94 recommended outdoors'
+                : 'Standard outdoor precautions'}
+            </span>
+            <span>23:00 Night Peak</span>
+          </div>
+        </SpotlightCard>
+      )}
 
       {/* Compact Interactive Choice Grid */}
       <SpotlightCard className="p-4 space-y-3">

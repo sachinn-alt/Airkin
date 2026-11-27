@@ -552,6 +552,7 @@ export default function App() {
                   selectedActionIds={selectedActionIds}
                   onToggleAction={handleToggleAction}
                   impact={liveImpact}
+                  hourly={aqi?.hourly}
                 />
               </div>
             </motion.div>

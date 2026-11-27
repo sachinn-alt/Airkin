@@ -28,24 +28,36 @@ const DIY_STEPS = [
 
 export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
   const [copied, setCopied] = useState(false);
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
   const [checkedDiy, setCheckedDiy] = useState<Record<number, boolean>>({});
   const [showModelMath, setShowModelMath] = useState(false);
 
   const city = aqi?.city ?? profile.city;
-  const usAqi = aqi?.current.usAqi ?? 200;
+  const indianAqi = aqi?.current.indianAqi ?? aqi?.current.usAqi ?? 220;
+  const cpcbCat = aqi?.current.cpcbCategory ?? 'Poor';
   const pm25 = aqi?.current.pm25 ?? impact.outdoorPm25;
   const winStart = aqi?.ventilationWindow.bestStartHour ?? '14:00';
   const winEnd = aqi?.ventilationWindow.bestEndHour ?? '16:00';
   const peakHour = aqi?.ventilationWindow.peakHour ?? '23:00';
 
-  const rwaBriefing = [
-    `AirKin Alert — ${city} | US AQI ${usAqi} (PM2.5: ${pm25} µg/m³)`,
-    `Safe Airing: ${winStart}–${winEnd} | Avoid: ${peakHour}`,
-    `• Gate engines OFF at school pickup`,
-    `• Zero evening leaf/trash fires`,
-    `• Wet-mop + MERV-13 / HEPA indoors`,
-    `Block impact (${impact.communityBlockMultiplier.households} homes): -${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 & -${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} t CO2e/winter`,
-  ].join('\n');
+  const rwaBriefing =
+    lang === 'hi'
+      ? [
+          `AirKin मोहल्ला स्वच्छ-हवा अलर्ट — ${city} | CPCB AQI ${indianAqi} (${cpcbCat}, PM2.5: ${pm25} µg/m³)`,
+          `खिड़की खोलने का सुरक्षित समय: ${winStart}–${winEnd} | ${peakHour} के आसपास बंद रखें`,
+          `• स्कूल गेट पर इंतज़ार करते समय गाड़ी का इंजन बंद रखें`,
+          `• शाम को सूखे पत्ते या कचरा बिल्कुल न जलाएँ`,
+          `• घर में गीला पोंछा लगाएँ और MERV-13 / HEPA फ़िल्टर चलाएँ`,
+          `${impact.communityBlockMultiplier.households} घरों की पहल से इस सर्दी में ${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 और ${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} t CO2e की बचत होगी।`,
+        ].join('\n')
+      : [
+          `AirKin Alert — ${city} | India CPCB AQI ${indianAqi} (${cpcbCat}, PM2.5: ${pm25} µg/m³)`,
+          `Safe Airing: ${winStart}–${winEnd} | Avoid: ${peakHour}`,
+          `• Gate engines OFF at school pickup`,
+          `• Zero evening leaf/trash fires`,
+          `• Wet-mop + MERV-13 / HEPA indoors`,
+          `Block impact (${impact.communityBlockMultiplier.households} homes): -${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 & -${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} t CO2e/winter`,
+        ].join('\n');
 
   const handleCopy = async () => {
     try {
@@ -79,19 +91,44 @@ export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
             </div>
           </div>
 
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition cursor-pointer"
-          >
-            {copied ? (
-              <TickSquare set="bold" size={14} primaryColor="#ffffff" />
-            ) : (
-              <Document set="light" size={14} primaryColor="#ffffff" />
-            )}
-            <span>{copied ? 'Copied' : 'Copy Alert'}</span>
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                aria-pressed={lang === 'en'}
+                className={`rounded-md px-2 py-0.5 font-medium cursor-pointer ${
+                  lang === 'en' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                }`}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('hi')}
+                aria-pressed={lang === 'hi'}
+                className={`rounded-md px-2 py-0.5 font-medium cursor-pointer ${
+                  lang === 'hi' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                }`}
+              >
+                हिंदी
+              </button>
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              type="button"
+              onClick={handleCopy}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition cursor-pointer"
+            >
+              {copied ? (
+                <TickSquare set="bold" size={14} primaryColor="#ffffff" />
+              ) : (
+                <Document set="light" size={14} primaryColor="#ffffff" />
+              )}
+              <span>{copied ? 'Copied' : 'Copy Alert'}</span>
+            </motion.button>
+          </div>
         </div>
 
         <pre className="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs leading-relaxed text-slate-800 font-sans">
