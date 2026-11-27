@@ -252,7 +252,7 @@ export function buildDeterministicPlan(
 
   return {
     mode: 'deterministic-model',
-    modelUsed: 'SmogShield Atmospheric & Mass-Balance Model',
+    modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
     headline:
       aqi.current.usAqi >= 150
         ? `Severe Winter Smog Action Plan for ${aqi.city} (AQI ${aqi.current.usAqi})`
@@ -289,7 +289,7 @@ export async function generateTailoredPlan(
     const context = buildContextPrompt(profile, aqi, activeIds);
 
     const prompt = `
-You are SmogShield AI, an atmospheric scientist and practical family/community clean-air coach.
+You are AirKin, an atmospheric scientist and practical family/community clean-air coach.
 Generate a highly practical, empathetic, science-grounded winter smog action plan tailored specifically to this household's location, live air quality, thermal inversion dynamics, and lifestyle.
 
 ${context}
@@ -513,7 +513,7 @@ export function buildDeterministicChatReply(
   if (topMatches.length === 0) {
     const topAction = scored[0];
     return [
-      `**SmogShield Scientific Briefing — ${aqi.city} (US AQI ${aqi.current.usAqi} · ${aqi.severity.label})**`,
+      `**AirKin Scientific Briefing — ${aqi.city} (US AQI ${aqi.current.usAqi} · ${aqi.severity.label})**`,
       `- **Highest-Impact Next Step:** *${topAction.action.title}* (Priority Score ${topAction.relevanceScore}; ${topAction.action.impactMechanism})`,
       `- **Indoor Exposure Model:** Baseline **${impact.baselineIndoorPm25} µg/m³** → Protected **${impact.optimizedIndoorPm25} µg/m³** (**-${impact.indoorReductionPct}%**), saving **${impact.inhaledDoseSavedUg.toLocaleString()} µg/day** inhaled across ${profile.householdSize} people.`,
       `- **Safe Airing & Community Impact:** Ventilate briefly around **${aqi.ventilationWindow.bestStartHour}–${aqi.ventilationWindow.bestEndHour}** (~${aqi.ventilationWindow.avgPm25InWindow} µg/m³). Your weekly emissions saved: **${impact.weeklyPm25EmissionsSavedGrams} g PM2.5** & **${impact.weeklyCo2eSavedKg} kg CO2e**.`,
@@ -539,7 +539,7 @@ export async function generateChatReply(params: {
     return {
       reply: buildDeterministicChatReply(question, profile, aqi, selectedActionIds),
       mode: 'deterministic-model',
-      modelUsed: 'SmogShield Atmospheric & Mass-Balance Model',
+      modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
     };
   }
 
@@ -556,7 +556,7 @@ export async function generateChatReply(params: {
       .join('\n');
 
     const prompt = `
-System Role: You are SmogShield AI, a practical, empathetic, scientifically accurate urban air-quality & winter-smog assistant for families and communities.
+System Role: You are AirKin, a practical, empathetic, scientifically accurate urban air-quality & winter-smog assistant for families and communities.
 Always:
 - Tailor advice to the user's live local AQI, thermal inversion risk, ventilation window, and household profile below.
 - Explain the direct quantified impact of each choice (indoor PM2.5 drop, inhaled dose saved, emissions prevented, or community multiplier).
@@ -594,7 +594,7 @@ User's latest question: ${question}
     return {
       reply: buildDeterministicChatReply(question, profile, aqi, selectedActionIds),
       mode: 'deterministic-model',
-      modelUsed: 'SmogShield Atmospheric & Mass-Balance Model',
+      modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
     };
   }
 }

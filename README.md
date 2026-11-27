@@ -1,6 +1,6 @@
-# SmogShield AI — Winter Smog & Clean-Air Family & Community Assistant
+# AirKin — Winter Smog & Clean-Air Family & Community Assistant
 
-**SmogShield AI** is a full-stack GenAI-powered assistant that helps families and communities navigate severe winter smog and urban air pollution. It combines live local air quality and meteorological data, thermal inversion risk scoring, an interactive indoor exposure & emission simulator, and context-aware AI recommendations that clearly quantify the direct impact of each choice.
+**AirKin** (*Air + Kin*) is a full-stack GenAI-powered assistant that helps families and communities navigate severe winter smog and urban air pollution. It combines live local air quality and meteorological data, thermal inversion risk scoring, an interactive indoor exposure & emission simulator, and context-aware AI recommendations that clearly quantify the direct impact of each choice.
 
 ---
 
@@ -18,7 +18,7 @@ Designed around two real-world personas:
 
 Winter urban smog is physically distinct from summer pollution because **nocturnal and morning thermal inversions** act like an atmospheric lid, trapping ground-level exhaust, residential heating smoke, and open-fire particulates close to where people breathe.
 
-SmogShield AI connects three core layers:
+AirKin connects three core layers:
 
 1. **Live Atmospheric & Inversion Analytics (`server/airQualityService.ts`)**
    - Geocodes any city worldwide via the Open-Meteo Geocoding API and fetches live `PM2.5`, `PM10`, `NO2`, `CO`, `SO2`, `O3`, `US AQI`, `European AQI`, temperature, humidity, and wind speed (with resilient offline winter-city presets if external network access is unavailable).
@@ -32,7 +32,7 @@ SmogShield AI connects three core layers:
 3. **Context-Scored GenAI Synthesis (`server/advisorService.ts`)**
    - Scores every intervention dynamically against the household's vulnerabilities, budget tier, commute distance, heating/cooking fuel, and live thermal inversion severity (`scoreInterventionsForContext`).
    - When `GEMINI_API_KEY` is configured on the server (`.env`), uses Google's official `@google/genai` SDK (`gemini-2.5-flash`) with strict JSON schema output grounded in live environmental metrics and the mass-balance output.
-   - When running without a server-side key, seamlessly runs the **SmogShield Atmospheric & Mass-Balance Model** (multi-factor priority scoring + weighted topic composition grounded in live data) with zero client-side key prompts (no BYOK).
+   - When running without a server-side key, seamlessly runs the **AirKin Atmospheric & Mass-Balance Model** (multi-factor priority scoring + weighted topic composition grounded in live data) with zero client-side key prompts (no BYOK).
 
 ---
 

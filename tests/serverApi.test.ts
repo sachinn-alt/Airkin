@@ -25,7 +25,7 @@ afterAll(async () => {
   });
 });
 
-describe('SmogShield API & Decision Engine', () => {
+describe('AirKin API & Decision Engine', () => {
   it('returns health metadata without leaking secrets', async () => {
     const res = await fetch(`${baseUrl}/api/health`);
     expect(res.status).toBe(200);

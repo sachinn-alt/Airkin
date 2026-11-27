@@ -80,7 +80,7 @@ export function AdvisorChat({
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-emerald-400" aria-hidden="true" />
           <h2 id="advisor-chat-heading" className="text-sm font-semibold text-slate-100">
-            Ask SmogShield AI Coach ({city})
+            Ask AirKin Coach ({city})
           </h2>
         </div>
         <span className="text-[11px] text-slate-400">Context-aware guidance</span>
@@ -144,7 +144,7 @@ export function AdvisorChat({
 
       <form onSubmit={handleSubmit} className="flex gap-2">
         <label htmlFor="chat-question-input" className="sr-only">
-          Ask SmogShield AI a question
+          Ask AirKin a question
         </label>
         <input
           id="chat-question-input"

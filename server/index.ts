@@ -148,6 +148,6 @@ if (isMainModule) {
   const port = Number(process.env.PORT) || 3001;
   const app = createApp();
   app.listen(port, () => {
-    console.log(`SmogShield AI API listening on http://localhost:${port}`);
+    console.log(`AirKin API listening on http://localhost:${port}`);
   });
 }

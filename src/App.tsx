@@ -88,7 +88,7 @@ export default function App() {
         setAqi(data.aqi);
         setPlan(data.plan);
       } catch {
-        setErrorMsg('Could not reach the SmogShield API server. Make sure the backend is running.');
+        setErrorMsg('Could not reach the AirKin API server. Make sure the backend is running.');
       } finally {
         setIsLoadingPlan(false);
       }
@@ -172,7 +172,7 @@ export default function App() {
         {
           id: `err-${Date.now()}`,
           role: 'assistant',
-          content: 'Network error contacting the SmogShield AI service.',
+          content: 'Network error contacting the AirKin AI service.',
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -202,7 +202,7 @@ export default function App() {
               <CloudFog className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-base font-bold tracking-tight text-white">SmogShield AI</h1>
+              <h1 className="text-base font-bold tracking-tight text-white">AirKin</h1>
               <p className="text-[11px] text-slate-400">
                 Winter Smog Navigation, Indoor Air Hacks & Community Impact Assistant
               </p>
