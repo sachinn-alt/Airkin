@@ -37,7 +37,7 @@ Winter urban smog behaves very differently from summer air pollution: **nocturna
 AirKin separates **quantitative atmospheric/indoor physics** from **GenAI reasoning** so every recommendation is both empathetic and mathematically grounded:
 
 ### 1. Live Atmospheric & Inversion Analytics (`server/airQualityService.ts`)
-- Geocodes any city worldwide via Open-Meteo and fetches live `PM2.5`, `PM10`, `NO2`, `CO`, `SO2`, `O3`, `US AQI`, `European AQI`, temperature, humidity, and wind speed (cached in-memory with a 10-minute bounded TTL, with calibrated offline winter-city profiles when external APIs are unreachable).
+- Geocodes **Indian cities** (`countryCode=IN` via Open-Meteo) and fetches live `PM2.5`, `PM10`, `NO2`, `CO`, `SO2`, `O3`, `US AQI`, `European AQI`, temperature, humidity, and wind speed (cached in-memory with a 10-minute bounded TTL, with calibrated offline Indian winter-city profiles when external APIs are unreachable).
 - Computes a **Winter Thermal Inversion Trap Score (`0–100`)** combining wind stagnation, cold temperatures, relative humidity, and `PM2.5` load.
 - Scans the 24-hour diurnal curve (`findVentilationWindow`) to pinpoint the **safest afternoon cross-ventilation window** and **peak inversion danger hour**.
 
@@ -129,7 +129,7 @@ flowchart LR
 | **Daily Breathing Volume** | `13.8 m³/day` (`11.2` indoor + `2.6` outdoor); `15.0 m³/day` with outdoor exercise | Standard adult/household average minute-ventilation split |
 | **Cigarette Equivalence** | `22 µg/m³` 24-hour `PM2.5` exposure ≈ `1` cigarette/day | Berkeley Earth PM2.5 health-communication benchmark |
 | **Winter Smog Season** | `14 weeks` per winter season | Used for seasonal `CO2e` and community block projections |
-| **External Data Resilience** | Calibrated offline city profiles (`Lahore`, `Delhi`, `Beijing`, etc.) | Fallback for AQI/weather telemetry when Open-Meteo is unreachable |
+| **External Data Resilience** | Calibrated offline Indian city profiles (`Delhi`, `Gurugram`, `Noida`, `Lucknow`, `Patna`, `Kanpur`, `Jaipur`, `Kolkata`) | Fallback for AQI/weather telemetry when Open-Meteo is unreachable |
 
 ---
 

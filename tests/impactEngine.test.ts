@@ -10,7 +10,7 @@ import {
 import type { HouseholdProfile, HourlyAqiPoint } from '../shared/types.js';
 
 const baseProfile: HouseholdProfile = {
-  city: 'Lahore',
+  city: 'Delhi',
   role: 'family',
   householdSize: 4,
   hasChildren: true,

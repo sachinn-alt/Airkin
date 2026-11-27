@@ -25,10 +25,19 @@ import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
 
-const QUICK_CITIES = ['Lahore', 'Delhi', 'Beijing', 'Salt Lake City', 'Sarajevo', 'London'];
+const QUICK_CITIES = [
+  'Delhi',
+  'Gurugram',
+  'Noida',
+  'Lucknow',
+  'Patna',
+  'Kanpur',
+  'Jaipur',
+  'Kolkata',
+];
 
 const INITIAL_PROFILE: HouseholdProfile = {
-  city: 'Lahore',
+  city: 'Delhi',
   role: 'family',
   householdSize: 4,
   hasChildren: true,
@@ -55,7 +64,7 @@ const SEVERITY_BADGE_STYLES: Record<AirQualitySnapshot['severity']['colorToken']
 
 export default function App() {
   const [profile, setProfile] = useState<HouseholdProfile>(INITIAL_PROFILE);
-  const [cityInput, setCityInput] = useState('Lahore');
+  const [cityInput, setCityInput] = useState('Delhi');
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>(() =>
     getDefaultSelectedActionIds(INITIAL_PROFILE)
   );
@@ -87,6 +96,10 @@ export default function App() {
           plan?: TailoredPlanResponse;
           error?: string;
         };
+        if (res.status === 400 && !data.aqi) {
+          setErrorMsg(data.error || 'Please enter a valid Indian city.');
+          return;
+        }
         if (data.aqi) {
           setAqi(data.aqi);
         }
@@ -221,7 +234,7 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-2">
             <form onSubmit={handleCitySearch} className="flex items-center gap-1.5">
               <label htmlFor="city-search-input" className="sr-only">
-                Search city for live air quality
+                Search Indian city for live air quality
               </label>
               <div className="relative">
                 <MapPin
@@ -233,7 +246,7 @@ export default function App() {
                   type="text"
                   value={cityInput}
                   onChange={(e) => setCityInput(e.target.value)}
-                  placeholder="Enter city..."
+                  placeholder="Search Indian city..."
                   className="w-44 sm:w-52 rounded-xl border border-slate-700 bg-slate-900 pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500"
                 />
               </div>
@@ -262,7 +275,7 @@ export default function App() {
         </div>
 
         <div className="mx-auto max-w-7xl px-4 pb-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="text-slate-500 mr-1">Winter hotspots:</span>
+          <span className="text-slate-500 mr-1">Indian winter hotspots:</span>
           {QUICK_CITIES.map((c) => (
             <button
               key={c}

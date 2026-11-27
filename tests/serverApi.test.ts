@@ -17,7 +17,7 @@ vi.mock('@google/genai', () => ({
 }));
 
 import { scoreInterventionsForContext } from '../server/advisorService.js';
-import { buildOfflineSnapshot } from '../server/airQualityService.js';
+import { buildOfflineSnapshot, INDIAN_CITY_PRESETS } from '../server/airQualityService.js';
 import { createApp } from '../server/index.js';
 import { validateProfile } from '../server/validation.js';
 
@@ -82,10 +82,15 @@ describe('AirKin API & GenAI Decision Engine', () => {
     expect(clean.heatingSource).toBe('wood_coal');
   });
 
+  it('restricts preset hotspots to Indian cities', () => {
+    expect(INDIAN_CITY_PRESETS.length).toBeGreaterThanOrEqual(6);
+    expect(INDIAN_CITY_PRESETS.every((c) => c.country === 'India')).toBe(true);
+  });
+
   it('ranks wood heating and filtration interventions higher for high-risk households', () => {
-    const aqi = buildOfflineSnapshot('Lahore');
+    const aqi = buildOfflineSnapshot('Delhi');
     const profile = validateProfile({
-      city: 'Lahore',
+      city: 'Delhi',
       heatingSource: 'wood_coal',
       purifierType: 'none',
       hasChildren: true,
@@ -160,7 +165,7 @@ describe('AirKin API & GenAI Decision Engine', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         question: 'When should I open windows today?',
-        profile: { city: 'Lahore' },
+        profile: { city: 'Lucknow' },
       }),
     });
     expect(okRes.status).toBe(200);
@@ -174,7 +179,7 @@ describe('AirKin API & GenAI Decision Engine', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        profile: { city: 'Beijing', householdSize: 3, commuteMode: 'solo_car' },
+        profile: { city: 'Patna', householdSize: 3, commuteMode: 'solo_car' },
         outdoorPm25: 135,
         selectedActionIds: ['diy_corsi_rosenthal', 'transit_carpool_swap'],
       }),

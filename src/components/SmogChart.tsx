@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { HourlyAqiPoint, VentilationWindow } from '@shared/types';
 import { WHO_PM25_24H_GUIDELINE } from '@shared/impactEngine';
 
@@ -9,7 +9,8 @@ interface SmogChartProps {
 }
 
 export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   if (!hourly.length) return null;
 
@@ -39,7 +40,41 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
   const hasWindowBand = winStartIdx >= 0 && winEndIdx > winStartIdx;
 
   const whoY = yOf(WHO_PM25_24H_GUIDELINE);
-  const activePoint = hoveredIdx !== null ? hourly[hoveredIdx] : null;
+  const activePoint = activeIdx !== null ? hourly[activeIdx] : null;
+
+  const updateIndexFromPointer = (clientX: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+
+    const svgX = ((clientX - rect.left) / rect.width) * width;
+    const clampedPlotX = Math.max(padLeft, Math.min(width - padRight, svgX));
+    const ratio = (clampedPlotX - padLeft) / plotW;
+    const nextIdx = Math.round(ratio * Math.max(1, hourly.length - 1));
+    setActiveIdx(Math.max(0, Math.min(hourly.length - 1, nextIdx)));
+  };
+
+  const handlePointerDown = (e: PointerEvent<SVGSVGElement>) => {
+    updateIndexFromPointer(e.clientX);
+  };
+
+  const handlePointerMove = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === 'touch' && e.buttons === 0) return;
+    updateIndexFromPointer(e.clientX);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<SVGSVGElement>) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setActiveIdx((prev) => (prev === null ? 0 : Math.min(hourly.length - 1, prev + 1)));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setActiveIdx((prev) => (prev === null ? hourly.length - 1 : Math.max(0, prev - 1)));
+    } else if (e.key === 'Escape') {
+      setActiveIdx(null);
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -66,10 +101,18 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
 
       <div className="relative">
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto overflow-visible"
+          tabIndex={0}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setActiveIdx(null)}
+          onPointerCancel={() => setActiveIdx(null)}
+          onBlur={() => setActiveIdx(null)}
+          onKeyDown={handleKeyDown}
+          className="w-full h-auto select-none touch-pan-y cursor-crosshair rounded-lg"
           role="img"
-          aria-label={`24 hour PM2.5 chart for ${city}. Best ventilation window is ${ventilationWindow.bestStartHour} to ${ventilationWindow.bestEndHour} averaging ${ventilationWindow.avgPm25InWindow} micrograms per cubic meter. Peak is ${ventilationWindow.peakHour} at ${ventilationWindow.peakPm25}.`}
+          aria-label={`24 hour PM2.5 chart for ${city}. Best ventilation window is ${ventilationWindow.bestStartHour} to ${ventilationWindow.bestEndHour} averaging ${ventilationWindow.avgPm25InWindow} micrograms per cubic meter. Peak is ${ventilationWindow.peakHour} at ${ventilationWindow.peakPm25}. Use left and right arrow keys to inspect hours.`}
         >
           <defs>
             <linearGradient id="pm25Grad" x1="0" y1="0" x2="0" y2="1">
@@ -154,11 +197,24 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
             strokeLinejoin="round"
           />
 
-          {/* Interactive points */}
+          {/* Active crosshair guide */}
+          {activeIdx !== null && (
+            <line
+              x1={xOf(activeIdx)}
+              y1={padTop}
+              x2={xOf(activeIdx)}
+              y2={padTop + plotH}
+              stroke="#94a3b8"
+              strokeWidth="1"
+              strokeDasharray="3 3"
+            />
+          )}
+
+          {/* X-axis labels & highlight markers */}
           {hourly.map((pt, i) => {
             const cx = xOf(i);
             const cy = yOf(pt.pm25);
-            const isHovered = hoveredIdx === i;
+            const isHovered = activeIdx === i;
             const isPeak = pt.hourLabel === ventilationWindow.peakHour;
             return (
               <g key={pt.hourLabel}>
@@ -176,42 +232,43 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                   <circle
                     cx={cx}
                     cy={cy}
-                    r={isHovered ? 5 : 4}
-                    className={isPeak ? 'fill-rose-400 stroke-slate-950' : 'fill-amber-300 stroke-slate-950'}
+                    r={isHovered ? 5.5 : 4}
+                    className={
+                      isPeak ? 'fill-rose-400 stroke-slate-950' : 'fill-amber-300 stroke-slate-950'
+                    }
                     strokeWidth="1.5"
                   />
                 )}
-                <rect
-                  x={cx - plotW / hourly.length / 2}
-                  y={padTop}
-                  width={plotW / hourly.length}
-                  height={plotH}
-                  fill="transparent"
-                  tabIndex={0}
-                  aria-label={`${pt.hourLabel}: PM2.5 ${pt.pm25} µg/m³, US AQI ${pt.usAqi}`}
-                  onMouseEnter={() => setHoveredIdx(i)}
-                  onMouseLeave={() => setHoveredIdx(null)}
-                  onFocus={() => setHoveredIdx(i)}
-                  onBlur={() => setHoveredIdx(null)}
-                />
               </g>
             );
           })}
         </svg>
 
-        {activePoint && (
-          <div
-            className="mt-2 flex items-center justify-between rounded-lg border border-slate-700/80 bg-slate-800/90 px-3 py-1.5 text-xs text-slate-200"
-            aria-live="polite"
-          >
-            <span>
-              <strong>{activePoint.hourLabel}</strong> — PM2.5:{' '}
-              <strong className="text-amber-300">{activePoint.pm25} µg/m³</strong> · PM10:{' '}
-              {activePoint.pm10} µg/m³
-            </span>
-            <span className="text-slate-300">US AQI ~{activePoint.usAqi}</span>
-          </div>
-        )}
+        {/* Fixed-height status strip prevents any layout shift on hover or touch */}
+        <div
+          className="mt-2 min-h-[36px] flex items-center justify-between rounded-lg border border-slate-700/80 bg-slate-800/90 px-3 py-1.5 text-xs text-slate-200"
+          aria-live="polite"
+        >
+          {activePoint ? (
+            <>
+              <span>
+                <strong>{activePoint.hourLabel}</strong> — PM2.5:{' '}
+                <strong className="text-amber-300">{activePoint.pm25} µg/m³</strong> · PM10:{' '}
+                {activePoint.pm10} µg/m³
+              </span>
+              <span className="text-slate-300">US AQI ~{activePoint.usAqi}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-slate-400">
+                Tap or hover the curve to inspect hourly PM2.5 levels
+              </span>
+              <span className="text-emerald-300 font-medium">
+                Safe window: {ventilationWindow.bestStartHour}–{ventilationWindow.bestEndHour}
+              </span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -12,7 +12,11 @@ import {
   getDefaultSelectedActionIds,
 } from '../shared/impactEngine.js';
 import { AiServiceError, generateChatReply, generateTailoredPlan } from './advisorService.js';
-import { fetchAirQualityForCity, SMOG_CITY_PRESETS } from './airQualityService.js';
+import {
+  CityNotFoundError,
+  fetchAirQualityForCity,
+  INDIAN_CITY_PRESETS,
+} from './airQualityService.js';
 import {
   sanitizeText,
   validateActionIds,
@@ -64,7 +68,7 @@ export function createApp() {
 
   app.get('/api/presets', (_req: Request, res: Response) => {
     res.json({
-      cities: SMOG_CITY_PRESETS.map((c) => ({
+      cities: INDIAN_CITY_PRESETS.map((c) => ({
         city: c.city,
         country: c.country,
       })),
@@ -73,9 +77,17 @@ export function createApp() {
   });
 
   app.get('/api/air-quality', async (req: Request, res: Response) => {
-    const city = validateCityQuery(req.query.city);
-    const snapshot = await fetchAirQualityForCity(city);
-    res.json(snapshot);
+    try {
+      const city = validateCityQuery(req.query.city);
+      const snapshot = await fetchAirQualityForCity(city);
+      res.json(snapshot);
+    } catch (err) {
+      if (err instanceof CityNotFoundError) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
+      res.status(500).json({ error: 'Unable to fetch air quality data.' });
+    }
   });
 
   app.post('/api/impact/calculate', async (req: Request, res: Response) => {
@@ -98,7 +110,17 @@ export function createApp() {
     }
     const profile = validateProfile(req.body?.profile);
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
-    const aqi = await fetchAirQualityForCity(profile.city);
+
+    let aqi;
+    try {
+      aqi = await fetchAirQualityForCity(profile.city);
+    } catch (err) {
+      if (err instanceof CityNotFoundError) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
 
     try {
       const plan = await generateTailoredPlan(profile, aqi, selectedActionIds);
@@ -126,7 +148,17 @@ export function createApp() {
     const profile = validateProfile(req.body?.profile);
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
     const history = validateChatHistory(req.body?.history);
-    const aqi = await fetchAirQualityForCity(profile.city);
+
+    let aqi;
+    try {
+      aqi = await fetchAirQualityForCity(profile.city);
+    } catch (err) {
+      if (err instanceof CityNotFoundError) {
+        res.status(err.statusCode).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
 
     try {
       const result = await generateChatReply({

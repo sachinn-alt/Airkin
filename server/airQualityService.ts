@@ -11,6 +11,14 @@ interface CacheEntry {
   data: AirQualitySnapshot;
 }
 
+export class CityNotFoundError extends Error {
+  readonly statusCode = 400;
+  constructor(message: string) {
+    super(message);
+    this.name = 'CityNotFoundError';
+  }
+}
+
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 100;
 const aqiCache = new Map<string, CacheEntry>();
@@ -28,19 +36,7 @@ export interface CityPreset {
   humidityPct: number;
 }
 
-export const SMOG_CITY_PRESETS: CityPreset[] = [
-  {
-    city: 'Lahore',
-    country: 'Pakistan',
-    latitude: 31.558,
-    longitude: 74.3507,
-    basePm25: 148,
-    basePm10: 196,
-    usAqi: 215,
-    tempC: 11.4,
-    windKmh: 4.2,
-    humidityPct: 78,
-  },
+export const INDIAN_CITY_PRESETS: CityPreset[] = [
   {
     city: 'Delhi',
     country: 'India',
@@ -54,57 +50,92 @@ export const SMOG_CITY_PRESETS: CityPreset[] = [
     humidityPct: 74,
   },
   {
-    city: 'Beijing',
-    country: 'China',
-    latitude: 39.9042,
-    longitude: 116.4074,
-    basePm25: 88,
-    basePm10: 118,
-    usAqi: 168,
-    tempC: 2.5,
-    windKmh: 6.1,
-    humidityPct: 62,
+    city: 'Gurugram',
+    country: 'India',
+    latitude: 28.4595,
+    longitude: 77.0266,
+    basePm25: 158,
+    basePm10: 215,
+    usAqi: 228,
+    tempC: 13.2,
+    windKmh: 4.1,
+    humidityPct: 72,
   },
   {
-    city: 'Salt Lake City',
-    country: 'United States',
-    latitude: 40.7608,
-    longitude: -111.891,
-    basePm25: 56,
-    basePm10: 74,
-    usAqi: 151,
-    tempC: -1.8,
-    windKmh: 3.5,
+    city: 'Noida',
+    country: 'India',
+    latitude: 28.5355,
+    longitude: 77.391,
+    basePm25: 168,
+    basePm10: 229,
+    usAqi: 239,
+    tempC: 12.8,
+    windKmh: 3.6,
+    humidityPct: 75,
+  },
+  {
+    city: 'Lucknow',
+    country: 'India',
+    latitude: 26.8467,
+    longitude: 80.9462,
+    basePm25: 142,
+    basePm10: 194,
+    usAqi: 208,
+    tempC: 14.1,
+    windKmh: 4.5,
     humidityPct: 76,
   },
   {
-    city: 'Sarajevo',
-    country: 'Bosnia and Herzegovina',
-    latitude: 43.8563,
-    longitude: 18.4131,
-    basePm25: 112,
-    basePm10: 142,
-    usAqi: 184,
-    tempC: 1.2,
-    windKmh: 3.2,
-    humidityPct: 83,
+    city: 'Patna',
+    country: 'India',
+    latitude: 25.5941,
+    longitude: 85.1376,
+    basePm25: 154,
+    basePm10: 210,
+    usAqi: 224,
+    tempC: 14.8,
+    windKmh: 4.0,
+    humidityPct: 79,
   },
   {
-    city: 'London',
-    country: 'United Kingdom',
-    latitude: 51.5072,
-    longitude: -0.1276,
-    basePm25: 28,
-    basePm10: 38,
-    usAqi: 84,
-    tempC: 6.8,
-    windKmh: 11.5,
-    humidityPct: 81,
+    city: 'Kanpur',
+    country: 'India',
+    latitude: 26.4499,
+    longitude: 80.3319,
+    basePm25: 149,
+    basePm10: 204,
+    usAqi: 216,
+    tempC: 13.7,
+    windKmh: 4.3,
+    humidityPct: 75,
+  },
+  {
+    city: 'Jaipur',
+    country: 'India',
+    latitude: 26.9124,
+    longitude: 75.7873,
+    basePm25: 98,
+    basePm10: 144,
+    usAqi: 174,
+    tempC: 15.2,
+    windKmh: 6.2,
+    humidityPct: 58,
+  },
+  {
+    city: 'Kolkata',
+    country: 'India',
+    latitude: 22.5726,
+    longitude: 88.3639,
+    basePm25: 118,
+    basePm10: 162,
+    usAqi: 186,
+    tempC: 18.6,
+    windKmh: 5.4,
+    humidityPct: 77,
   },
 ];
 
 function buildDiurnalSmogCurve(basePm25: number, baseAqi: number): HourlyAqiPoint[] {
-  // Typical winter thermal-inversion diurnal multiplier: peaks 07-09h and 20-23h, dips 13-16h
   const multipliers = [
     1.18, 1.15, 1.12, 1.08, 1.1, 1.18, 1.28, 1.35, 1.3, 1.12, 0.92, 0.78,
     0.68, 0.62, 0.6, 0.65, 0.78, 0.95, 1.14, 1.26, 1.32, 1.3, 1.25, 1.2,
@@ -127,13 +158,13 @@ function buildDiurnalSmogCurve(basePm25: number, baseAqi: number): HourlyAqiPoin
 export function buildOfflineSnapshot(cityName: string): AirQualitySnapshot {
   const lower = cityName.toLowerCase();
   const matched =
-    SMOG_CITY_PRESETS.find((p) => p.city.toLowerCase() === lower) ?? {
-      ...SMOG_CITY_PRESETS[0],
+    INDIAN_CITY_PRESETS.find((p) => p.city.toLowerCase() === lower) ?? {
+      ...INDIAN_CITY_PRESETS[0],
       city: cityName,
-      country: 'Urban Monitoring Profile',
-      basePm25: 96,
-      basePm10: 132,
-      usAqi: 172,
+      country: 'India',
+      basePm25: 116,
+      basePm10: 158,
+      usAqi: 184,
     };
 
   const hourly = buildDiurnalSmogCurve(matched.basePm25, matched.usAqi);
@@ -147,9 +178,9 @@ export function buildOfflineSnapshot(cityName: string): AirQualitySnapshot {
     current: {
       pm25: matched.basePm25,
       pm10: matched.basePm10,
-      no2: 64,
-      co: 1850,
-      so2: 24,
+      no2: 68,
+      co: 1920,
+      so2: 26,
       o3: 31,
       usAqi: matched.usAqi,
       europeanAqi: Math.min(100, Math.round(matched.usAqi * 0.42)),
@@ -194,24 +225,37 @@ export async function fetchAirQualityForCity(rawCity: string): Promise<AirQualit
 
     const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
       cityQuery
-    )}&count=1&language=en&format=json`;
+    )}&count=8&countryCode=IN&language=en&format=json`;
     const geoRes = await fetch(geoUrl, { signal: controller.signal });
     if (!geoRes.ok) throw new Error(`Geocoding status ${geoRes.status}`);
     const geoJson = (await geoRes.json()) as {
       results?: Array<{
         name: string;
         country?: string;
+        country_code?: string;
         latitude: number;
         longitude: number;
       }>;
     };
 
-    const place = geoJson.results?.[0];
+    const indianPlaces = (geoJson.results ?? []).filter(
+      (r) => r.country_code === 'IN' || r.country?.toLowerCase() === 'india'
+    );
+    const place = indianPlaces[0];
+
     if (!place) {
       clearTimeout(timer);
-      const fallback = buildOfflineSnapshot(cityQuery);
-      setCached(cacheKey, fallback);
-      return fallback;
+      const presetMatch = INDIAN_CITY_PRESETS.find(
+        (p) => p.city.toLowerCase() === cacheKey
+      );
+      if (presetMatch) {
+        const fallback = buildOfflineSnapshot(presetMatch.city);
+        setCached(cacheKey, fallback);
+        return fallback;
+      }
+      throw new CityNotFoundError(
+        `"${cityQuery}" was not found in India. AirKin tracks Indian cities only (e.g., Delhi, Gurugram, Noida, Lucknow, Patna, Kanpur, Jaipur, Kolkata, Mumbai).`
+      );
     }
 
     const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${place.latitude}&longitude=${place.longitude}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,us_aqi,european_aqi&hourly=pm10,pm2_5,us_aqi&forecast_days=1&timezone=auto`;
@@ -244,8 +288,8 @@ export async function fetchAirQualityForCity(rawCity: string): Promise<AirQualit
     const pm25 = Number((cur.pm2_5 ?? 45).toFixed(1));
     const pm10 = Number((cur.pm10 ?? pm25 * 1.3).toFixed(1));
     const usAqi = Math.round(cur.us_aqi ?? 110);
-    const temperatureC = Number((wCur.temperature_2m ?? 9.5).toFixed(1));
-    const windSpeedKmh = Number((wCur.wind_speed_10m ?? 6.5).toFixed(1));
+    const temperatureC = Number((wCur.temperature_2m ?? 14.0).toFixed(1));
+    const windSpeedKmh = Number((wCur.wind_speed_10m ?? 5.0).toFixed(1));
     const humidityPct = Math.round(wCur.relative_humidity_2m ?? 70);
 
     const times = aqiJson.hourly?.time ?? [];
@@ -254,7 +298,9 @@ export async function fetchAirQualityForCity(rawCity: string): Promise<AirQualit
     const hAqi = aqiJson.hourly?.us_aqi ?? [];
 
     const hourly: HourlyAqiPoint[] = times.slice(0, 24).map((t, idx) => {
-      const hourStr = t.includes('T') ? t.split('T')[1].slice(0, 5) : `${String(idx).padStart(2, '0')}:00`;
+      const hourStr = t.includes('T')
+        ? t.split('T')[1].slice(0, 5)
+        : `${String(idx).padStart(2, '0')}:00`;
       return {
         time: t,
         hourLabel: hourStr,
@@ -266,7 +312,7 @@ export async function fetchAirQualityForCity(rawCity: string): Promise<AirQualit
 
     const snapshot: AirQualitySnapshot = {
       city: place.name,
-      country: place.country ?? '',
+      country: 'India',
       latitude: place.latitude,
       longitude: place.longitude,
       source: 'open-meteo-live',
@@ -297,7 +343,8 @@ export async function fetchAirQualityForCity(rawCity: string): Promise<AirQualit
 
     setCached(cacheKey, snapshot);
     return snapshot;
-  } catch {
+  } catch (err) {
+    if (err instanceof CityNotFoundError) throw err;
     const fallback = buildOfflineSnapshot(cityQuery);
     setCached(cacheKey, fallback);
     return fallback;

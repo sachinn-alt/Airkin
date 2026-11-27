@@ -34,10 +34,24 @@ test.describe('AirKin End-to-End Verification', () => {
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
 
-    // 5. Switch to Delhi hotspot and verify live update
-    await page.getByRole('button', { name: 'Delhi', exact: true }).click();
-    await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart for Delhi/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Ask AirKin Coach \(Delhi\)/i })).toBeVisible();
+    // 5. Switch to Lucknow hotspot and verify live update without chart layout glitch
+    await page.getByRole('button', { name: 'Lucknow', exact: true }).click();
+    await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart for Lucknow/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Ask AirKin Coach \(Lucknow\)/i })).toBeVisible();
+
+    // Verify chart pointer interaction causes zero bounding-box height glitch
+    const chartBoxBefore = await page
+      .locator('section[aria-label="Current Local Air Quality and Thermal Inversion Status"]')
+      .boundingBox();
+    const chartSvg = page.getByRole('img', { name: /24 hour PM2\.5 chart for Lucknow/i });
+    const svgBox = await chartSvg.boundingBox();
+    if (svgBox) {
+      await page.mouse.move(svgBox.x + svgBox.width * 0.5, svgBox.y + svgBox.height * 0.5);
+    }
+    const chartBoxAfter = await page
+      .locator('section[aria-label="Current Local Air Quality and Thermal Inversion Status"]')
+      .boundingBox();
+    expect(Math.abs((chartBoxAfter?.height ?? 0) - (chartBoxBefore?.height ?? 0))).toBeLessThan(2);
 
     // 6. Verify Community Mode multiplier switches from 25 homes -> 100 homes
     await expect(page.getByText(/Community Multiplier \(25 homes\)/i)).toBeVisible();

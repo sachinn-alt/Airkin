@@ -51,7 +51,7 @@ export function sanitizeText(input: unknown, maxLen = 120): string {
 
 export function validateCityQuery(city: unknown): string {
   const cleaned = sanitizeText(city, 80);
-  return cleaned.length >= 2 ? cleaned : 'Lahore';
+  return cleaned.length >= 2 ? cleaned : 'Delhi';
 }
 
 export function validateProfile(raw: unknown): HouseholdProfile {
