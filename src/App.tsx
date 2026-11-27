@@ -255,7 +255,7 @@ export default function App() {
             >
               <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
               <span>
-                {geminiActive ? 'Gemini 3.8 Flash Active' : 'Server GEMINI_API_KEY Required'}
+                {geminiActive ? 'Gemini Flash Active' : 'Server GEMINI_API_KEY Required'}
               </span>
             </span>
           </div>

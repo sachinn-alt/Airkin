@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%203.8%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Vitest-12%2F12%20Passing-10B981?logo=vitest&logoColor=white)](#testing--verification)
 [![Repo Size](https://img.shields.io/badge/Repo%20Size-%3C1%20MB-0EA5E9)](#evaluation-focus-areas)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-airkin.vercel.app-10B981?logo=vercel&logoColor=white)](https://airkin.vercel.app/)
@@ -53,7 +53,7 @@ Indoor PM2.5 = (Outdoor_PM2.5 × Envelope_Infiltration + Remaining_Indoor_Source
 
 ### 3. Server-Side GenAI Synthesis (`server/advisorService.ts`)
 - Ranks physical interventions dynamically (`scoreInterventionsForContext`) using household vulnerabilities, budget tier, commute mode/distance, heating/cooking fuels, and live inversion severity, then injects that grounded telemetry into `buildContextPrompt`.
-- Calls **Google Gemini 3.8 Flash** (`@google/genai`) server-side using `process.env.GEMINI_API_KEY` (zero BYOK or client-side key handling) with strict JSON schema output (`responseSchema`) for `/api/plan` and multi-turn conversational context for `/api/chat`.
+- Calls **Google Gemini Flash** (`gemini-3.5-flash-lite` primary with automatic multi-model Gemini failover via `@google/genai`) server-side using `process.env.GEMINI_API_KEY` (zero BYOK or client-side key handling) with strict JSON schema output (`responseSchema`) for `/api/plan` and multi-turn conversational context for `/api/chat`.
 
 ---
 

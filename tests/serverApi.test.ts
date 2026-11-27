@@ -21,6 +21,14 @@ import { buildOfflineSnapshot } from '../server/airQualityService.js';
 import { createApp } from '../server/index.js';
 import { validateProfile } from '../server/validation.js';
 
+vi.mock('../server/airQualityService.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../server/airQualityService.js')>();
+  return {
+    ...actual,
+    fetchAirQualityForCity: vi.fn(async (city: string) => actual.buildOfflineSnapshot(city)),
+  };
+});
+
 let baseUrl = '';
 let server: ReturnType<ReturnType<typeof createApp>['listen']>;
 const originalGeminiKey = process.env.GEMINI_API_KEY;
