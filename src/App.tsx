@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import {
   AlertTriangle,
   CloudFog,
+  Compass,
   Cpu,
   MapPin,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Thermometer,
+  Users,
   Wind,
 } from 'lucide-react';
 import {
@@ -20,10 +23,13 @@ import type {
   TailoredPlanResponse,
 } from '@shared/types';
 import { AdvisorChat } from './components/AdvisorChat';
+import { CommunityGuide } from './components/CommunityGuide';
 import { ImpactSimulator } from './components/ImpactSimulator';
 import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
+
+type AppPage = 'overview' | 'simulator' | 'community';
 
 const QUICK_CITIES = [
   'Delhi',
@@ -54,15 +60,16 @@ const INITIAL_PROFILE: HouseholdProfile = {
 };
 
 const SEVERITY_BADGE_STYLES: Record<AirQualitySnapshot['severity']['colorToken'], string> = {
-  emerald: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
-  amber: 'border-amber-500/40 bg-amber-500/15 text-amber-300',
-  orange: 'border-orange-500/40 bg-orange-500/15 text-orange-300',
-  red: 'border-red-500/40 bg-red-500/15 text-red-300',
-  purple: 'border-purple-500/40 bg-purple-500/15 text-purple-300',
-  rose: 'border-rose-500/40 bg-rose-500/15 text-rose-300',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  amber: 'border-amber-200 bg-amber-50 text-amber-800',
+  orange: 'border-orange-200 bg-orange-50 text-orange-800',
+  red: 'border-red-200 bg-red-50 text-red-800',
+  purple: 'border-purple-200 bg-purple-50 text-purple-800',
+  rose: 'border-rose-200 bg-rose-50 text-rose-800',
 };
 
 export default function App() {
+  const [activePage, setActivePage] = useState<AppPage>('overview');
   const [profile, setProfile] = useState<HouseholdProfile>(INITIAL_PROFILE);
   const [cityInput, setCityInput] = useState('Delhi');
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>(() =>
@@ -208,25 +215,32 @@ export default function App() {
     [profile, aqi?.current.pm25, selectedActionIds]
   );
 
+  const navItems: Array<{ id: AppPage; label: string; icon: typeof Compass }> = [
+    { id: 'overview', label: 'Live Smog & Daily Plan', icon: Compass },
+    { id: 'simulator', label: 'Household & Impact Simulator', icon: SlidersHorizontal },
+    { id: 'community', label: 'Community & Guide', icon: Users },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100">
+    <div className="min-h-screen bg-[#F6F8F7] text-slate-900 pb-24">
       <a
         href="#main-dashboard"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-emerald-500 focus:px-3 focus:py-2 focus:text-slate-950 focus:font-semibold"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-teal-700 focus:px-3 focus:py-2 focus:text-white focus:font-semibold"
       >
         Skip to main dashboard
       </a>
 
-      <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      {/* Clean Light Header */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
               <CloudFog className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-base font-bold tracking-tight text-white">AirKin</h1>
-              <p className="text-[11px] text-slate-400">
-                Winter Smog Navigation, Indoor Air Hacks & Community Impact Assistant
+              <h1 className="text-base font-bold tracking-tight text-slate-900">AirKin</h1>
+              <p className="text-[11px] text-slate-500">
+                Indian Winter Smog & Clean-Air Family Assistant
               </p>
             </div>
           </div>
@@ -247,12 +261,12 @@ export default function App() {
                   value={cityInput}
                   onChange={(e) => setCityInput(e.target.value)}
                   placeholder="Search Indian city..."
-                  className="w-44 sm:w-52 rounded-xl border border-slate-700 bg-slate-900 pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500"
+                  className="w-44 sm:w-52 rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400"
                 />
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-700 transition cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-200 transition cursor-pointer"
               >
                 <Search className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Check</span>
@@ -262,8 +276,8 @@ export default function App() {
             <span
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium ${
                 geminiActive
-                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                  : 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                  ? 'border-teal-200 bg-teal-50 text-teal-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800'
               }`}
             >
               <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
@@ -274,152 +288,197 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 pb-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="text-slate-500 mr-1">Indian winter hotspots:</span>
-          {QUICK_CITIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => handleSelectQuickCity(c)}
-              className={`rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
-                aqi?.city.toLowerCase() === c.toLowerCase()
-                  ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300 font-medium'
-                  : 'border-slate-800 bg-slate-900/70 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+        {/* City Chips + 3-Page Navigation */}
+        <div className="mx-auto max-w-6xl px-4 pb-2.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="text-slate-500 mr-1">Indian winter hotspots:</span>
+            {QUICK_CITIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => handleSelectQuickCity(c)}
+                className={`rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
+                  aqi?.city.toLowerCase() === c.toLowerCase()
+                    ? 'border-teal-600 bg-teal-50 text-teal-800 font-semibold'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          <nav aria-label="AirKin Views" className="flex flex-wrap gap-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActivePage(item.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                    active
+                      ? 'bg-teal-700 text-white shadow-xs'
+                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </header>
 
-      <main id="main-dashboard" className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+      <main id="main-dashboard" className="mx-auto max-w-6xl px-4 py-6 space-y-6">
         {errorMsg && (
           <div
             role="alert"
-            className="rounded-xl border border-rose-500/40 bg-rose-500/15 px-4 py-3 text-xs text-rose-200 flex items-center gap-2"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 flex items-center gap-2"
           >
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {aqi && (
-          <section
-            aria-label="Current Local Air Quality and Thermal Inversion Status"
-            className="grid grid-cols-1 lg:grid-cols-12 gap-4"
-          >
-            <div className="lg:col-span-5 rounded-2xl border border-slate-800 bg-slate-900/75 p-4 flex flex-col justify-between gap-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs text-slate-400">
-                    {aqi.city}
-                    {aqi.country ? `, ${aqi.country}` : ''} ·{' '}
-                    <span className="text-slate-500">
-                      {aqi.source === 'open-meteo-live'
-                        ? 'Live Open-Meteo Feed'
-                        : 'Offline Winter Profile'}
+        {/* PAGE 1: LIVE SMOG & DAILY PLAN */}
+        {activePage === 'overview' && (
+          <div className="space-y-6">
+            {aqi && (
+              <section
+                aria-label="Current Local Air Quality and Thermal Inversion Status"
+                className="grid grid-cols-1 lg:grid-cols-12 gap-4"
+              >
+                <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col justify-between gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-slate-500">
+                        {aqi.city}, India ·{' '}
+                        <span className="text-slate-400">
+                          {aqi.source === 'open-meteo-live'
+                            ? 'Live Open-Meteo Feed'
+                            : 'Offline Indian Profile'}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-baseline gap-2.5">
+                        <span className="text-4xl font-extrabold tracking-tight text-slate-900">
+                          {aqi.current.usAqi}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500">US AQI</span>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
+                        SEVERITY_BADGE_STYLES[aqi.severity.colorToken]
+                      }`}
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                      {aqi.severity.label}
                     </span>
                   </div>
-                  <div className="mt-1 flex items-baseline gap-2.5">
-                    <span className="text-4xl font-extrabold tracking-tight text-white">
-                      {aqi.current.usAqi}
-                    </span>
-                    <span className="text-xs font-medium text-slate-400">US AQI</span>
+
+                  <p className="text-xs text-slate-600">{aqi.severity.summary}</p>
+
+                  <div className="grid grid-cols-4 gap-2 pt-1 text-center">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-500">PM2.5</div>
+                      <div className="text-sm font-bold text-amber-800">{aqi.current.pm25}</div>
+                      <div className="text-[10px] text-slate-500">µg/m³</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-500">PM10</div>
+                      <div className="text-sm font-bold text-slate-800">{aqi.current.pm10}</div>
+                      <div className="text-[10px] text-slate-500">µg/m³</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
+                        <Thermometer className="h-3 w-3" aria-hidden="true" /> Temp
+                      </div>
+                      <div className="text-sm font-bold text-sky-800">{aqi.current.temperatureC}°C</div>
+                      <div className="text-[10px] text-slate-500">{aqi.current.humidityPct}% RH</div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                      <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
+                        <Wind className="h-3 w-3" aria-hidden="true" /> Wind
+                      </div>
+                      <div className="text-sm font-bold text-teal-800">
+                        {aqi.current.windSpeedKmh}
+                      </div>
+                      <div className="text-[10px] text-slate-500">km/h</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-800">
+                        Winter Thermal Inversion Trap
+                      </span>
+                      <span className="font-bold text-amber-800">
+                        {aqi.inversionRisk.label} ({aqi.inversionRisk.score}/100)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">{aqi.inversionRisk.explanation}</p>
                   </div>
                 </div>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-                    SEVERITY_BADGE_STYLES[aqi.severity.colorToken]
-                  }`}
-                >
-                  <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                  {aqi.severity.label}
-                </span>
-              </div>
 
-              <p className="text-xs text-slate-300">{aqi.severity.summary}</p>
-
-              <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-[10px] text-slate-400">PM2.5</div>
-                  <div className="text-sm font-bold text-amber-300">{aqi.current.pm25}</div>
-                  <div className="text-[10px] text-slate-500">µg/m³</div>
-                </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-[10px] text-slate-400">PM10</div>
-                  <div className="text-sm font-bold text-slate-200">{aqi.current.pm10}</div>
-                  <div className="text-[10px] text-slate-500">µg/m³</div>
-                </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
-                    <Thermometer className="h-3 w-3" aria-hidden="true" /> Temp
+                <div className="lg:col-span-7 flex flex-col justify-between gap-3">
+                  <SmogChart
+                    hourly={aqi.hourly}
+                    ventilationWindow={aqi.ventilationWindow}
+                    city={aqi.city}
+                  />
+                  <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-xs text-teal-900">
+                    <strong>Ventilation Advisory: </strong>
+                    {aqi.ventilationWindow.advisory}
                   </div>
-                  <div className="text-sm font-bold text-sky-300">{aqi.current.temperatureC}°C</div>
-                  <div className="text-[10px] text-slate-500">{aqi.current.humidityPct}% RH</div>
                 </div>
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-2">
-                  <div className="text-[10px] text-slate-400 flex items-center justify-center gap-0.5">
-                    <Wind className="h-3 w-3" aria-hidden="true" /> Wind
-                  </div>
-                  <div className="text-sm font-bold text-emerald-300">
-                    {aqi.current.windSpeedKmh}
-                  </div>
-                  <div className="text-[10px] text-slate-500">km/h</div>
-                </div>
-              </div>
+              </section>
+            )}
 
-              <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-200">Winter Thermal Inversion Trap</span>
-                  <span className="font-bold text-amber-300">
-                    {aqi.inversionRisk.label} ({aqi.inversionRisk.score}/100)
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">{aqi.inversionRisk.explanation}</p>
-              </div>
-            </div>
-
-            <div className="lg:col-span-7 flex flex-col justify-between gap-3">
-              <SmogChart
-                hourly={aqi.hourly}
-                ventilationWindow={aqi.ventilationWindow}
-                city={aqi.city}
-              />
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-200">
-                <strong>Ventilation Advisory: </strong>
-                {aqi.ventilationWindow.advisory}
-              </div>
-            </div>
-          </section>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-4 space-y-5">
-            <ProfilePanel
-              profile={profile}
-              onChange={setProfile}
-              onRegeneratePlan={() => void loadCityAndPlan(profile, selectedActionIds)}
-              isLoadingPlan={isLoadingPlan}
-            />
-            <AdvisorChat
-              city={aqi?.city ?? profile.city}
-              messages={messages}
-              onSendMessage={handleSendMessage}
-              isSending={isSendingChat}
-            />
-          </div>
-
-          <div className="lg:col-span-8 space-y-6">
-            <ImpactSimulator
-              selectedActionIds={selectedActionIds}
-              onToggleAction={handleToggleAction}
-              impact={liveImpact}
-            />
             <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
           </div>
-        </div>
+        )}
+
+        {/* PAGE 2: HOUSEHOLD PROFILE & IMPACT SIMULATOR */}
+        {activePage === 'simulator' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-4">
+              <ProfilePanel
+                profile={profile}
+                onChange={setProfile}
+                onRegeneratePlan={() => {
+                  void loadCityAndPlan(profile, selectedActionIds);
+                  setActivePage('overview');
+                }}
+                isLoadingPlan={isLoadingPlan}
+              />
+            </div>
+            <div className="lg:col-span-8">
+              <ImpactSimulator
+                selectedActionIds={selectedActionIds}
+                onToggleAction={handleToggleAction}
+                impact={liveImpact}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* PAGE 3: COMMUNITY ACTION & METHODOLOGY */}
+        {activePage === 'community' && (
+          <CommunityGuide aqi={aqi} profile={profile} impact={liveImpact} />
+        )}
       </main>
+
+      {/* Hovering Floating Ask AirKin Coach */}
+      <AdvisorChat
+        city={aqi?.city ?? profile.city}
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        isSending={isSendingChat}
+      />
     </div>
   );
 }

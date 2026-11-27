@@ -77,23 +77,23 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-100">
+          <h3 className="text-sm font-semibold text-slate-900">
             24-Hour Smog Curve & Safe Ventilation Window — {city}
           </h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             PM2.5 (µg/m³) across the diurnal inversion cycle. Dashed line = WHO 24h guideline (15 µg/m³).
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
-          <span className="inline-flex items-center gap-1.5 text-emerald-300">
-            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/40 border border-emerald-400" />
+          <span className="inline-flex items-center gap-1.5 font-medium text-teal-700">
+            <span className="h-2.5 w-2.5 rounded-sm bg-teal-500/20 border border-teal-600" />
             Best Airing ({ventilationWindow.bestStartHour}–{ventilationWindow.bestEndHour})
           </span>
-          <span className="inline-flex items-center gap-1.5 text-rose-300">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+          <span className="inline-flex items-center gap-1.5 font-medium text-rose-700">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-600" />
             Peak ({ventilationWindow.peakHour}: {ventilationWindow.peakPm25} µg/m³)
           </span>
         </div>
@@ -115,9 +115,9 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
           aria-label={`24 hour PM2.5 chart for ${city}. Best ventilation window is ${ventilationWindow.bestStartHour} to ${ventilationWindow.bestEndHour} averaging ${ventilationWindow.avgPm25InWindow} micrograms per cubic meter. Peak is ${ventilationWindow.peakHour} at ${ventilationWindow.peakPm25}. Use left and right arrow keys to inspect hours.`}
         >
           <defs>
-            <linearGradient id="pm25Grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#f97316" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="#f97316" stopOpacity="0.03" />
+            <linearGradient id="pm25GradLight" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#d97706" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#d97706" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -132,14 +132,14 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                   y1={y}
                   x2={width - padRight}
                   y2={y}
-                  stroke="#1e293b"
+                  stroke="#e2e8f0"
                   strokeWidth="1"
                 />
                 <text
                   x={padLeft - 6}
                   y={y + 4}
                   textAnchor="end"
-                  className="fill-slate-400 text-[10px]"
+                  className="fill-slate-500 text-[10px]"
                 >
                   {val}
                 </text>
@@ -154,10 +154,10 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
               y={padTop}
               width={Math.max(12, xOf(winEndIdx) - xOf(winStartIdx))}
               height={plotH}
-              fill="#10b981"
-              fillOpacity="0.16"
-              stroke="#34d399"
-              strokeOpacity="0.5"
+              fill="#0d9488"
+              fillOpacity="0.12"
+              stroke="#0f766e"
+              strokeOpacity="0.45"
               strokeDasharray="4 3"
               rx="4"
             />
@@ -171,7 +171,7 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                 y1={whoY}
                 x2={width - padRight}
                 y2={whoY}
-                stroke="#38bdf8"
+                stroke="#0284c7"
                 strokeWidth="1.25"
                 strokeDasharray="5 4"
               />
@@ -179,7 +179,7 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                 x={width - padRight - 2}
                 y={whoY - 5}
                 textAnchor="end"
-                className="fill-sky-300 text-[10px] font-medium"
+                className="fill-sky-700 text-[10px] font-medium"
               >
                 WHO 15 µg/m³
               </text>
@@ -187,11 +187,11 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
           )}
 
           {/* PM2.5 curve */}
-          <path d={areaD} fill="url(#pm25Grad)" />
+          <path d={areaD} fill="url(#pm25GradLight)" />
           <path
             d={pathD}
             fill="none"
-            stroke="#fb923c"
+            stroke="#c2410c"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -204,7 +204,7 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
               y1={padTop}
               x2={xOf(activeIdx)}
               y2={padTop + plotH}
-              stroke="#94a3b8"
+              stroke="#64748b"
               strokeWidth="1"
               strokeDasharray="3 3"
             />
@@ -223,7 +223,7 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                     x={cx}
                     y={height - 10}
                     textAnchor="middle"
-                    className="fill-slate-400 text-[10px]"
+                    className="fill-slate-500 text-[10px]"
                   >
                     {pt.hourLabel}
                   </text>
@@ -234,9 +234,9 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
                     cy={cy}
                     r={isHovered ? 5.5 : 4}
                     className={
-                      isPeak ? 'fill-rose-400 stroke-slate-950' : 'fill-amber-300 stroke-slate-950'
+                      isPeak ? 'fill-rose-600 stroke-white' : 'fill-amber-600 stroke-white'
                     }
-                    strokeWidth="1.5"
+                    strokeWidth="1.75"
                   />
                 )}
               </g>
@@ -246,24 +246,24 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
 
         {/* Fixed-height status strip prevents any layout shift on hover or touch */}
         <div
-          className="mt-2 min-h-[36px] flex items-center justify-between rounded-lg border border-slate-700/80 bg-slate-800/90 px-3 py-1.5 text-xs text-slate-200"
+          className="mt-2 min-h-[36px] flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700"
           aria-live="polite"
         >
           {activePoint ? (
             <>
               <span>
-                <strong>{activePoint.hourLabel}</strong> — PM2.5:{' '}
-                <strong className="text-amber-300">{activePoint.pm25} µg/m³</strong> · PM10:{' '}
+                <strong className="text-slate-900">{activePoint.hourLabel}</strong> — PM2.5:{' '}
+                <strong className="text-amber-800">{activePoint.pm25} µg/m³</strong> · PM10:{' '}
                 {activePoint.pm10} µg/m³
               </span>
-              <span className="text-slate-300">US AQI ~{activePoint.usAqi}</span>
+              <span className="font-medium text-slate-600">US AQI ~{activePoint.usAqi}</span>
             </>
           ) : (
             <>
-              <span className="text-slate-400">
+              <span className="text-slate-500">
                 Tap or hover the curve to inspect hourly PM2.5 levels
               </span>
-              <span className="text-emerald-300 font-medium">
+              <span className="text-teal-700 font-medium">
                 Safe window: {ventilationWindow.bestStartHour}–{ventilationWindow.bestEndHour}
               </span>
             </>
