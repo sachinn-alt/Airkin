@@ -99,7 +99,7 @@ describe('AirKin API & GenAI Decision Engine', () => {
     expect(body.error).toContain('GEMINI_API_KEY');
   });
 
-  it('generates a grounded Gemini 2.5 Flash plan when GEMINI_API_KEY is configured', async () => {
+  it('generates a grounded Gemini 3.8 Flash plan when GEMINI_API_KEY is configured', async () => {
     process.env.GEMINI_API_KEY = 'test-server-key-123456';
     mockGenerateContent.mockResolvedValueOnce({
       text: JSON.stringify({

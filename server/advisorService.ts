@@ -11,7 +11,15 @@ import type {
   TailoredPlanResponse,
 } from '../shared/types.js';
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const GEMINI_FALLBACK_CHAIN = [
+  'gemini-3.8-flash',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+];
 
 export class AiServiceError extends Error {
   readonly statusCode: number;
@@ -143,11 +151,57 @@ function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new AiServiceError(
-      'GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY to .env to enable Gemini 2.5 Flash.',
+      'GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY to .env to enable Gemini 3.8 Flash.',
       503
     );
   }
   return new GoogleGenAI({ apiKey });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateWithGeminiRetry(
+  ai: GoogleGenAI,
+  params: { contents: string; config?: Record<string, unknown> }
+): Promise<{ text: string; modelUsed: string }> {
+  const models = Array.from(new Set([DEFAULT_MODEL, ...GEMINI_FALLBACK_CHAIN]));
+  let lastError: unknown;
+
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: params.contents,
+          config: params.config,
+        });
+        const text = (response.text || '').trim();
+        if (text) {
+          return { text, modelUsed: model };
+        }
+      } catch (err) {
+        lastError = err;
+        const status = (err as { status?: number })?.status;
+        if (status === 401 || status === 403) {
+          throw new AiServiceError('Server GEMINI_API_KEY was rejected by Google Gemini API.', 502);
+        }
+        // On 404 (model unavailable) immediately move to next model in chain
+        if (status === 404) break;
+        if (attempt === 0) await sleep(350);
+      }
+    }
+  }
+
+  const lastStatus = (lastError as { status?: number })?.status;
+  if (lastStatus === 503 || lastStatus === 429) {
+    throw new AiServiceError(
+      'Google Gemini models are temporarily experiencing high demand. Please retry in a few seconds.',
+      503
+    );
+  }
+  throw new AiServiceError('Unable to reach Gemini upstream service.', 502);
 }
 
 export async function generateTailoredPlan(
@@ -176,81 +230,80 @@ Requirements:
 4. Never suggest unsafe myths (e.g., ozone air purifiers, houseplants as sufficient smog filters, or cloth/surgical masks as equivalent to N95).
 `.trim();
 
-  try {
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt,
-      config: {
-        temperature: 0.4,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            headline: { type: Type.STRING },
-            situationSummary: { type: Type.STRING },
-            riskAlert: { type: Type.STRING },
-            recommendations: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  id: { type: Type.STRING },
-                  category: {
-                    type: Type.STRING,
-                    enum: ['routine', 'indoor_hack', 'sustainable_swap', 'community'],
-                  },
-                  priority: {
-                    type: Type.STRING,
-                    enum: ['Immediate', 'High Impact', 'Community Multiplier'],
-                  },
-                  title: { type: Type.STRING },
-                  timingOrEffort: { type: Type.STRING },
-                  steps: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  directImpactHeadline: { type: Type.STRING },
-                  directImpactDetail: { type: Type.STRING },
-                  scienceWhy: { type: Type.STRING },
+  const { text, modelUsed } = await generateWithGeminiRetry(ai, {
+    contents: prompt,
+    config: {
+      temperature: 0.4,
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          headline: { type: Type.STRING },
+          situationSummary: { type: Type.STRING },
+          riskAlert: { type: Type.STRING },
+          recommendations: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                category: {
+                  type: Type.STRING,
+                  enum: ['routine', 'indoor_hack', 'sustainable_swap', 'community'],
                 },
-                required: [
-                  'id',
-                  'category',
-                  'priority',
-                  'title',
-                  'timingOrEffort',
-                  'steps',
-                  'directImpactHeadline',
-                  'directImpactDetail',
-                  'scienceWhy',
-                ],
+                priority: {
+                  type: Type.STRING,
+                  enum: ['Immediate', 'High Impact', 'Community Multiplier'],
+                },
+                title: { type: Type.STRING },
+                timingOrEffort: { type: Type.STRING },
+                steps: { type: Type.ARRAY, items: { type: Type.STRING } },
+                directImpactHeadline: { type: Type.STRING },
+                directImpactDetail: { type: Type.STRING },
+                scienceWhy: { type: Type.STRING },
               },
+              required: [
+                'id',
+                'category',
+                'priority',
+                'title',
+                'timingOrEffort',
+                'steps',
+                'directImpactHeadline',
+                'directImpactDetail',
+                'scienceWhy',
+              ],
             },
           },
-          required: ['headline', 'situationSummary', 'riskAlert', 'recommendations'],
         },
+        required: ['headline', 'situationSummary', 'riskAlert', 'recommendations'],
       },
-    });
+    },
+  });
 
-    const parsed = JSON.parse(response.text || '{}') as Partial<TailoredPlanResponse>;
-    if (!parsed.recommendations || parsed.recommendations.length < 1) {
-      throw new AiServiceError('Gemini returned an incomplete structured plan.', 502);
-    }
-
-    return {
-      mode: 'gemini-live',
-      modelUsed: DEFAULT_MODEL,
-      headline: parsed.headline || `Clean-Air Action Plan for ${aqi.city}`,
-      situationSummary:
-        parsed.situationSummary ||
-        `${aqi.city} is at US AQI ${aqi.current.usAqi} (${aqi.severity.label}).`,
-      riskAlert: parsed.riskAlert || impact.vulnerabilityNote,
-      recommendations: parsed.recommendations.slice(0, 4),
-      impactSummary: impact,
-      disclaimer:
-        'Powered by Google Gemini 2.5 Flash grounded with live Open-Meteo AQI & an indoor mass-balance model. Seek medical care for acute respiratory distress.',
-    };
-  } catch (err) {
-    if (err instanceof AiServiceError) throw err;
-    throw new AiServiceError('Unable to generate AI plan from Gemini upstream service.', 502);
+  let parsed: Partial<TailoredPlanResponse>;
+  try {
+    parsed = JSON.parse(text) as Partial<TailoredPlanResponse>;
+  } catch {
+    throw new AiServiceError('Gemini returned invalid JSON for the action plan.', 502);
   }
+
+  if (!parsed.recommendations || parsed.recommendations.length < 1) {
+    throw new AiServiceError('Gemini returned an incomplete structured plan.', 502);
+  }
+
+  return {
+    mode: 'gemini-live',
+    modelUsed,
+    headline: parsed.headline || `Clean-Air Action Plan for ${aqi.city}`,
+    situationSummary:
+      parsed.situationSummary ||
+      `${aqi.city} is at US AQI ${aqi.current.usAqi} (${aqi.severity.label}).`,
+    riskAlert: parsed.riskAlert || impact.vulnerabilityNote,
+    recommendations: parsed.recommendations.slice(0, 4),
+    impactSummary: impact,
+    disclaimer: `Powered by Google ${modelUsed} grounded with live Open-Meteo AQI & an indoor mass-balance model. Seek medical care for acute respiratory distress.`,
+  };
 }
 
 export async function generateChatReply(params: {
@@ -291,25 +344,14 @@ ${conversationText || '(New conversation)'}
 User's latest question: ${question}
 `.trim();
 
-  try {
-    const response = await ai.models.generateContent({
-      model: DEFAULT_MODEL,
-      contents: prompt,
-      config: { temperature: 0.45 },
-    });
+  const { text, modelUsed } = await generateWithGeminiRetry(ai, {
+    contents: prompt,
+    config: { temperature: 0.45 },
+  });
 
-    const text = (response.text || '').trim();
-    if (!text) {
-      throw new AiServiceError('Gemini returned an empty response.', 502);
-    }
-
-    return {
-      reply: text,
-      mode: 'gemini-live',
-      modelUsed: DEFAULT_MODEL,
-    };
-  } catch (err) {
-    if (err instanceof AiServiceError) throw err;
-    throw new AiServiceError('Unable to reach Gemini upstream service.', 502);
-  }
+  return {
+    reply: text,
+    mode: 'gemini-live',
+    modelUsed,
+  };
 }

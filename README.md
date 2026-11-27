@@ -6,7 +6,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%202.5%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%203.8%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Vitest-12%2F12%20Passing-10B981?logo=vitest&logoColor=white)](#testing--verification)
 [![Repo Size](https://img.shields.io/badge/Repo%20Size-%3C1%20MB-0EA5E9)](#evaluation-focus-areas)
 
@@ -52,7 +52,7 @@ Indoor PM2.5 = (Outdoor_PM2.5 × Envelope_Infiltration + Remaining_Indoor_Source
 
 ### 3. Server-Side GenAI Synthesis (`server/advisorService.ts`)
 - Ranks physical interventions dynamically (`scoreInterventionsForContext`) using household vulnerabilities, budget tier, commute mode/distance, heating/cooking fuels, and live inversion severity, then injects that grounded telemetry into `buildContextPrompt`.
-- Calls **Google Gemini 2.5 Flash** (`@google/genai`) server-side using `process.env.GEMINI_API_KEY` (zero BYOK or client-side key handling) with strict JSON schema output (`responseSchema`) for `/api/plan` and multi-turn conversational context for `/api/chat`.
+- Calls **Google Gemini 3.8 Flash** (`@google/genai`) server-side using `process.env.GEMINI_API_KEY` (zero BYOK or client-side key handling) with strict JSON schema output (`responseSchema`) for `/api/plan` and multi-turn conversational context for `/api/chat`.
 
 ---
 
@@ -64,7 +64,7 @@ flowchart LR
     Shared["shared/impactEngine.ts<br/>(&lt;1ms Live Mass-Balance Recalculation)"]
     API["Express API Server<br/>(Validation, Headers, Rate Limit)"]
     Meteo["Open-Meteo API<br/>(Geocoding, AQI, Weather + 10m Cache)"]
-    Gemini["Google Gemini 2.5 Flash (@google/genai)<br/>(Structured Plans &amp; Multi-Turn Coaching)"]
+    Gemini["Google Gemini 3.8 Flash (@google/genai)<br/>(Structured Plans &amp; Multi-Turn Coaching)"]
 
     UI <--> Shared
     UI -->|POST /api/plan &amp; /api/chat| API
@@ -87,8 +87,8 @@ flowchart LR
 | `/api/presets` | `GET` | Winter smog hotspot cities and full intervention catalog |
 | `/api/air-quality?city=...` | `GET` | Live/cached AQI, inversion risk score, hourly curve, and ventilation window |
 | `/api/impact/calculate` | `POST` | Computes indoor `PM2.5`, inhaled dose saved, and emission reductions |
-| `/api/plan` | `POST` | Returns live AQI + Gemini 2.5 Flash 4-pillar tailored plan (`503` if server key unset) |
-| `/api/chat` | `POST` | Grounded multi-turn conversational coaching via Gemini 2.5 Flash |
+| `/api/plan` | `POST` | Returns live AQI + Gemini 3.8 Flash 4-pillar tailored plan (`503` if server key unset) |
+| `/api/chat` | `POST` | Grounded multi-turn conversational coaching via Gemini 3.8 Flash |
 
 ---
 
@@ -101,7 +101,7 @@ flowchart LR
 ├── server/
 │   ├── index.ts                 # Express server, security headers, rate limiting & API routes
 │   ├── airQualityService.ts     # Open-Meteo geocoding/AQI/weather client + 10m TTL cache + presets
-│   ├── advisorService.ts        # Context grounding & Google Gemini 2.5 Flash (@google/genai) service
+│   ├── advisorService.ts        # Context grounding & Google Gemini 3.8 Flash (@google/genai) service
 │   └── validation.ts            # Strict input sanitization & schema clamping
 ├── src/
 │   ├── App.tsx                  # Main dashboard & state orchestration

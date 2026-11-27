@@ -130,7 +130,7 @@ export function AdvisorChat({
               <div className="min-w-0 flex-1 space-y-1">
                 <SafeMessageBody content={msg.content} />
                 {msg.mode && (
-                  <div className="text-[10px] text-slate-500">Gemini 2.5 Flash</div>
+                  <div className="text-[10px] text-slate-500">Gemini 3.8 Flash</div>
                 )}
               </div>
             </div>
