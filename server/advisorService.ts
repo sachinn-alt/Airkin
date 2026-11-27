@@ -11,13 +11,12 @@ import type {
   TailoredPlanResponse,
 } from '../shared/types.js';
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const GEMINI_FALLBACK_CHAIN = [
-  'gemini-3.8-flash',
-  'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-3.5-flash',
+  'gemini-3.8-flash',
   'gemini-flash-latest',
+  'gemini-3.5-flash',
   'gemini-flash-lite-latest',
 ];
 
@@ -158,44 +157,52 @@ function getGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error('Gemini timeout'), { status: 504 })), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 async function generateWithGeminiRetry(
   ai: GoogleGenAI,
   params: { contents: string; config?: Record<string, unknown> }
 ): Promise<{ text: string; modelUsed: string }> {
-  const models = Array.from(new Set([DEFAULT_MODEL, ...GEMINI_FALLBACK_CHAIN]));
+  const models = Array.from(new Set([DEFAULT_MODEL, ...GEMINI_FALLBACK_CHAIN])).slice(0, 4);
   let lastError: unknown;
 
   for (const model of models) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
+    try {
+      const response = await withTimeout(
+        ai.models.generateContent({
           model,
           contents: params.contents,
           config: params.config,
-        });
-        const text = (response.text || '').trim();
-        if (text) {
-          return { text, modelUsed: model };
-        }
-      } catch (err) {
-        lastError = err;
-        const status = (err as { status?: number })?.status;
-        if (status === 401 || status === 403) {
-          throw new AiServiceError('Server GEMINI_API_KEY was rejected by Google Gemini API.', 502);
-        }
-        // On 404 (model unavailable) immediately move to next model in chain
-        if (status === 404) break;
-        if (attempt === 0) await sleep(350);
+        }),
+        8500
+      );
+      const text = (response.text || '').trim();
+      if (text) {
+        return { text, modelUsed: model };
+      }
+    } catch (err) {
+      lastError = err;
+      const status = (err as { status?: number })?.status;
+      if (status === 401 || status === 403) {
+        throw new AiServiceError('Server GEMINI_API_KEY was rejected by Google Gemini API.', 502);
       }
     }
   }
 
   const lastStatus = (lastError as { status?: number })?.status;
-  if (lastStatus === 503 || lastStatus === 429) {
+  if (lastStatus === 503 || lastStatus === 429 || lastStatus === 504) {
     throw new AiServiceError(
       'Google Gemini models are temporarily experiencing high demand. Please retry in a few seconds.',
       503
