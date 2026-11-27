@@ -11,12 +11,12 @@ import type {
   TailoredPlanResponse,
 } from '../shared/types.js';
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const GEMINI_FALLBACK_CHAIN = [
-  'gemini-3.6-flash',
   'gemini-3.5-flash-lite',
-  'gemini-flash-latest',
-  'gemini-3.8-flash',
+  'gemini-3.5-flash',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
 ];
 
 export class AiServiceError extends Error {
@@ -185,7 +185,7 @@ async function generateWithGeminiRetry(
           contents: params.contents,
           config: params.config,
         }),
-        18000
+        22000
       );
       const text = (response.text || '').trim();
       if (text) {
@@ -240,7 +240,6 @@ Requirements:
     contents: prompt,
     config: {
       temperature: 0.4,
-      thinkingConfig: { thinkingBudget: 0 },
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -353,7 +352,7 @@ User's latest question: ${question}
 
   const { text, modelUsed } = await generateWithGeminiRetry(ai, {
     contents: prompt,
-    config: { temperature: 0.45, thinkingConfig: { thinkingBudget: 0 } },
+    config: { temperature: 0.45 },
   });
 
   return {

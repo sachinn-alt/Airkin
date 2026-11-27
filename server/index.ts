@@ -57,7 +57,7 @@ export function createApp() {
     res.json({
       status: 'ok',
       geminiConfiguredOnServer: Boolean(process.env.GEMINI_API_KEY?.trim()),
-      model: process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
       timestamp: new Date().toISOString(),
     });
   });
