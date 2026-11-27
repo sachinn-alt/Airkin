@@ -17,7 +17,12 @@ vi.mock('@google/genai', () => ({
 }));
 
 import { scoreInterventionsForContext } from '../server/advisorService.js';
-import { buildOfflineSnapshot, INDIAN_CITY_PRESETS } from '../server/airQualityService.js';
+import {
+  buildOfflineIndiaFeed,
+  buildOfflineSnapshot,
+  INDIAN_CITY_PRESETS,
+  mapWeatherCode,
+} from '../server/airQualityService.js';
 import { createApp } from '../server/index.js';
 import { validateProfile } from '../server/validation.js';
 
@@ -26,6 +31,7 @@ vi.mock('../server/airQualityService.js', async (importOriginal) => {
   return {
     ...actual,
     fetchAirQualityForCity: vi.fn(async (city: string) => actual.buildOfflineSnapshot(city)),
+    fetchIndiaLiveFeed: vi.fn(async () => actual.buildOfflineIndiaFeed()),
   };
 });
 
@@ -82,9 +88,20 @@ describe('AirKin API & GenAI Decision Engine', () => {
     expect(clean.heatingSource).toBe('wood_coal');
   });
 
-  it('restricts preset hotspots to Indian cities', () => {
-    expect(INDIAN_CITY_PRESETS.length).toBeGreaterThanOrEqual(6);
+  it('restricts preset hotspots to Indian cities and returns all-India live feed', async () => {
+    expect(INDIAN_CITY_PRESETS.length).toBeGreaterThanOrEqual(15);
     expect(INDIAN_CITY_PRESETS.every((c) => c.country === 'India')).toBe(true);
+    expect(mapWeatherCode(45)).toBe('Winter Fog / Mist');
+    expect(buildOfflineIndiaFeed().cities.length).toBe(INDIAN_CITY_PRESETS.length);
+
+    const res = await fetch(`${baseUrl}/api/india-feed`);
+    expect(res.status).toBe(200);
+    const feed = (await res.json()) as { cities: Array<{ region: string; weatherLabel: string }> };
+    expect(feed.cities.length).toBeGreaterThanOrEqual(15);
+    const regions = new Set(feed.cities.map((c) => c.region));
+    expect(regions.has('North')).toBe(true);
+    expect(regions.has('South')).toBe(true);
+    expect(regions.has('West')).toBe(true);
   });
 
   it('ranks wood heating and filtration interventions higher for high-risk households', () => {

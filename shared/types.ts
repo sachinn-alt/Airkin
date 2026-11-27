@@ -63,6 +63,8 @@ export interface AirQualitySnapshot {
     temperatureC: number;
     windSpeedKmh: number;
     humidityPct: number;
+    weatherCode?: number;
+    weatherLabel?: string;
   };
   severity: {
     level: 'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous';
@@ -147,6 +149,33 @@ export interface TailoredPlanResponse {
   recommendations: RecommendationCard[];
   impactSummary: ImpactSummary;
   disclaimer: string;
+}
+
+export type IndiaRegion = 'North' | 'West' | 'East' | 'South' | 'Central';
+
+export interface IndiaFeedCity {
+  city: string;
+  state: string;
+  region: IndiaRegion;
+  latitude: number;
+  longitude: number;
+  usAqi: number;
+  pm25: number;
+  pm10: number;
+  temperatureC: number;
+  windSpeedKmh: number;
+  humidityPct: number;
+  weatherCode: number;
+  weatherLabel: string;
+  severity: AirQualitySnapshot['severity'];
+  inversionScore: number;
+  inversionLabel: AirQualitySnapshot['inversionRisk']['label'];
+}
+
+export interface IndiaLiveFeedResponse {
+  source: 'open-meteo-live' | 'offline-scenario';
+  fetchedAt: string;
+  cities: IndiaFeedCity[];
 }
 
 export interface ChatMessage {

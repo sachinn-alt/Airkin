@@ -19,14 +19,17 @@ import type {
   AirQualitySnapshot,
   ChatMessage,
   HouseholdProfile,
+  IndiaLiveFeedResponse,
   TailoredPlanResponse,
 } from '@shared/types';
 import { AdvisorChat } from './components/AdvisorChat';
 import { CommunityGuide } from './components/CommunityGuide';
 import { ImpactSimulator } from './components/ImpactSimulator';
+import { IndiaLiveFeed } from './components/IndiaLiveFeed';
 import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
+import { WeatherVisualScene } from './components/WeatherVisualScene';
 import { AnimatedCounter, AqiGaugeRing, SpotlightCard } from './components/ui/AceternityPrimitives';
 
 type AppPage = 'overview' | 'simulator' | 'community';
@@ -37,8 +40,8 @@ const QUICK_CITIES = [
   'Noida',
   'Lucknow',
   'Patna',
-  'Kanpur',
-  'Jaipur',
+  'Mumbai',
+  'Bengaluru',
   'Kolkata',
 ];
 
@@ -76,6 +79,7 @@ export default function App() {
     getDefaultSelectedActionIds(INITIAL_PROFILE)
   );
   const [aqi, setAqi] = useState<AirQualitySnapshot | null>(null);
+  const [indiaFeed, setIndiaFeed] = useState<IndiaLiveFeedResponse | null>(null);
   const [plan, setPlan] = useState<TailoredPlanResponse | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -130,6 +134,13 @@ export default function App() {
       .then((r) => r.json())
       .then((d: { geminiConfiguredOnServer?: boolean }) => {
         setGeminiActive(Boolean(d.geminiConfiguredOnServer));
+      })
+      .catch(() => {});
+
+    fetch('/api/india-feed')
+      .then((r) => r.json())
+      .then((feed: IndiaLiveFeedResponse) => {
+        if (Array.isArray(feed.cities)) setIndiaFeed(feed);
       })
       .catch(() => {});
 
@@ -239,7 +250,7 @@ export default function App() {
             </span>
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900">AirKin</h1>
-              <p className="text-[10px] text-slate-500">Indian Winter Smog Assistant</p>
+              <p className="text-[10px] text-slate-500">All-India Winter Smog Assistant</p>
             </div>
           </div>
 
@@ -257,7 +268,7 @@ export default function App() {
                   type="text"
                   value={cityInput}
                   onChange={(e) => setCityInput(e.target.value)}
-                  placeholder="Indian city..."
+                  placeholder="Any Indian city..."
                   className="w-40 sm:w-48 rounded-xl border border-slate-300 bg-white pl-8 pr-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400"
                 />
               </div>
@@ -358,7 +369,7 @@ export default function App() {
         )}
 
         <AnimatePresence mode="wait">
-          {/* PAGE 1: LIVE SMOG & DAILY PLAN */}
+          {/* PAGE 1: LIVE SMOG, VISUAL WEATHER SCENE, ALL-INDIA FEED & DAILY PLAN */}
           {activePage === 'overview' && (
             <motion.div
               key="overview"
@@ -371,10 +382,10 @@ export default function App() {
               {aqi && (
                 <section
                   aria-label="Current Local Air Quality and Thermal Inversion Status"
-                  className="grid grid-cols-1 lg:grid-cols-12 gap-4"
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch"
                 >
-                  {/* Left Bento Gauge Card */}
-                  <SpotlightCard className="lg:col-span-4 p-4 flex flex-col justify-between gap-3">
+                  {/* Col 1-4: AQI Ring Gauge + Metrics */}
+                  <SpotlightCard className="lg:col-span-4 p-4 flex flex-col justify-between gap-3 h-full">
                     <div className="flex items-center justify-between gap-3">
                       <AqiGaugeRing
                         aqi={aqi.current.usAqi}
@@ -383,8 +394,7 @@ export default function App() {
                       />
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="text-[11px] text-slate-500">
-                          {aqi.city}, IN ·{' '}
-                          {aqi.source === 'open-meteo-live' ? 'Live' : 'Preset'}
+                          {aqi.city}, IN · {aqi.source === 'open-meteo-live' ? 'Live' : 'Preset'}
                         </div>
                         <span
                           className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-semibold ${
@@ -395,7 +405,7 @@ export default function App() {
                           {aqi.severity.label}
                         </span>
                         <div className="text-[11px] text-slate-600">
-                          Inversion: <strong className="text-amber-800">{aqi.inversionRisk.label}</strong> ({aqi.inversionRisk.score}/100)
+                          Cap: <strong className="text-amber-800">{aqi.inversionRisk.label}</strong> ({aqi.inversionRisk.score}/100)
                         </div>
                       </div>
                     </div>
@@ -422,12 +432,11 @@ export default function App() {
                       <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
                         <div className="text-[10px] text-slate-500">Wind</div>
                         <div className="text-xs font-bold text-teal-800">
-                          {aqi.current.windSpeedKmh} km/h
+                          {aqi.current.windSpeedKmh}
                         </div>
                       </div>
                     </div>
 
-                    {/* Quick Protection Snapshot */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="rounded-xl border border-teal-200 bg-teal-50/70 px-2.5 py-2">
                         <div className="text-[10px] text-teal-700 font-medium">Indoor Target</div>
@@ -444,8 +453,13 @@ export default function App() {
                     </div>
                   </SpotlightCard>
 
-                  {/* Right 24h Smog Curve */}
-                  <div className="lg:col-span-8">
+                  {/* Col 5-8: Interactive Visual Weather & Air Quality Scene */}
+                  <div className="lg:col-span-4">
+                    <WeatherVisualScene aqi={aqi} impact={liveImpact} />
+                  </div>
+
+                  {/* Col 9-12: 24h Smog Curve */}
+                  <div className="lg:col-span-4">
                     <SmogChart
                       hourly={aqi.hourly}
                       ventilationWindow={aqi.ventilationWindow}
@@ -454,6 +468,13 @@ export default function App() {
                   </div>
                 </section>
               )}
+
+              {/* All-India Live Weather & Smog Feed */}
+              <IndiaLiveFeed
+                feed={indiaFeed}
+                activeCity={aqi?.city ?? profile.city}
+                onSelectCity={handleSelectQuickCity}
+              />
 
               <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
             </motion.div>

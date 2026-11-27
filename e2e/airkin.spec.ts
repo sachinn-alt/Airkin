@@ -25,14 +25,21 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
     await expect(page.getByText(/Connect Gemini Key/i)).toHaveCount(0);
 
-    // 3. Page 1: Live Smog & Daily Plan
+    // 3. Page 1: Live Smog, Interactive Weather Visual Scene & All-India Feed
     await expect(page.getByText(/Gemini Flash Active/i)).toBeVisible();
     await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart/i })).toBeVisible();
+    await expect(page.getByRole('img', { name: /Interactive weather and air quality visual/i })).toBeVisible();
+    await expect(page.getByText(/All-India Live Weather & Smog Feed/i)).toBeVisible();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
 
-    // 4. Switch to Lucknow Indian hotspot and verify chart pointer interaction causes zero glitch
-    await page.getByRole('button', { name: 'Lucknow', exact: true }).click();
+    // Interactive scene layer buttons work
+    await page.getByRole('button', { name: 'Sanctuary', exact: true }).click();
+    await expect(page.getByText(/Protected Indoors/i)).toBeVisible();
+
+    // 4. Filter All-India Feed to North & switch to Lucknow, verifying chart stability
+    await page.getByRole('button', { name: 'North', exact: true }).click();
+    await page.getByRole('button', { name: 'Lucknow', exact: true }).first().click();
     const chartSvg = page.getByRole('img', { name: /24 hour PM2\.5 chart for Lucknow/i });
     await expect(chartSvg).toBeVisible();
 

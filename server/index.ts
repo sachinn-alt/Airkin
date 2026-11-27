@@ -15,6 +15,7 @@ import { AiServiceError, generateChatReply, generateTailoredPlan } from './advis
 import {
   CityNotFoundError,
   fetchAirQualityForCity,
+  fetchIndiaLiveFeed,
   INDIAN_CITY_PRESETS,
 } from './airQualityService.js';
 import {
@@ -74,6 +75,11 @@ export function createApp() {
       })),
       actions: ACTION_CATALOG,
     });
+  });
+
+  app.get('/api/india-feed', async (_req: Request, res: Response) => {
+    const feed = await fetchIndiaLiveFeed();
+    res.json(feed);
   });
 
   app.get('/api/air-quality', async (req: Request, res: Response) => {
