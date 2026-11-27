@@ -10,12 +10,13 @@ export function cn(...inputs: ClassValue[]) {
 interface SpotlightCardProps {
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
 }
 
 /**
  * Aceternity-inspired light SpotlightCard with subtle pointer-tracked tint (no neon).
  */
-export function SpotlightCard({ children, className }: SpotlightCardProps) {
+export function SpotlightCard({ children, className, contentClassName }: SpotlightCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState({ x: 0, y: 0, active: false });
 
@@ -32,7 +33,7 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
       }}
       onPointerLeave={() => setPos((p) => ({ ...p, active: false }))}
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/88 backdrop-blur-md shadow-xs transition-shadow hover:shadow-md',
+        'relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white/88 backdrop-blur-md shadow-xs transition-shadow hover:shadow-md',
         className
       )}
     >
@@ -44,7 +45,9 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
           background: `radial-gradient(280px circle at ${pos.x}px ${pos.y}px, rgba(15, 118, 110, 0.07), transparent 70%)`,
         }}
       />
-      <div className="relative z-10">{children}</div>
+      <div className={cn('relative z-10 flex-1 flex flex-col', contentClassName)}>
+        {children}
+      </div>
     </motion.div>
   );
 }

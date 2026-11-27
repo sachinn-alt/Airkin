@@ -79,7 +79,7 @@ export function SmogChart({ hourly, ventilationWindow, city }: SmogChartProps) {
   };
 
   return (
-    <SpotlightCard className="p-4">
+    <SpotlightCard className="p-4 h-full" contentClassName="justify-between">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-700">

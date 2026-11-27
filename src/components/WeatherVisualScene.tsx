@@ -39,7 +39,7 @@ export function WeatherVisualScene({ aqi, impact }: WeatherVisualSceneProps) {
   };
 
   return (
-    <SpotlightCard className="p-4 flex flex-col justify-between h-full">
+    <SpotlightCard className="p-4 h-full" contentClassName="justify-between">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-sky-50 text-sky-700">

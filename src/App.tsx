@@ -389,7 +389,10 @@ export default function App() {
                   className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch"
                 >
                   {/* Col 1-4: AQI Ring Gauge + Metrics */}
-                  <SpotlightCard className="lg:col-span-4 p-4 flex flex-col justify-between gap-3 h-full">
+                  <SpotlightCard
+                    className="lg:col-span-4 p-4 h-full"
+                    contentClassName="justify-between gap-3"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <AqiGaugeRing
                         aqi={aqi.current.usAqi}
@@ -397,8 +400,13 @@ export default function App() {
                         colorToken={aqi.severity.colorToken}
                       />
                       <div className="min-w-0 flex-1 space-y-1.5">
-                        <div className="text-[11px] text-slate-500">
-                          {aqi.city}, IN · {aqi.source === 'open-meteo-live' ? 'Live' : 'Preset'}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span className="truncate font-medium text-slate-700">
+                            {aqi.city}, India
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                            {aqi.source === 'open-meteo-live' ? 'Live' : 'Preset'}
+                          </span>
                         </div>
                         <span
                           className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-semibold ${
@@ -409,46 +417,67 @@ export default function App() {
                           {aqi.severity.label}
                         </span>
                         <div className="text-[11px] text-slate-600">
-                          Cap: <strong className="text-amber-800">{aqi.inversionRisk.label}</strong> ({aqi.inversionRisk.score}/100)
+                          RH {aqi.current.humidityPct}% · Safe {aqi.ventilationWindow.bestStartHour}–{aqi.ventilationWindow.bestEndHour}
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-4 gap-1.5 text-center">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 py-2 px-1">
                         <div className="text-[10px] text-slate-500">PM2.5</div>
                         <div className="text-xs font-bold text-amber-800">
                           <AnimatedCounter value={aqi.current.pm25} decimals={1} />
                         </div>
+                        <div className="text-[9px] text-slate-400">µg/m³</div>
                       </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 py-2 px-1">
                         <div className="text-[10px] text-slate-500">PM10</div>
                         <div className="text-xs font-bold text-slate-800">
                           <AnimatedCounter value={aqi.current.pm10} decimals={1} />
                         </div>
+                        <div className="text-[9px] text-slate-400">µg/m³</div>
                       </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 py-2 px-1">
                         <div className="text-[10px] text-slate-500">Temp</div>
                         <div className="text-xs font-bold text-sky-800">
                           {aqi.current.temperatureC}°C
                         </div>
+                        <div className="text-[9px] text-slate-400">ambient</div>
                       </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                      <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 py-2 px-1">
                         <div className="text-[10px] text-slate-500">Wind</div>
                         <div className="text-xs font-bold text-teal-800">
                           {aqi.current.windSpeedKmh}
                         </div>
+                        <div className="text-[9px] text-slate-400">km/h</div>
+                      </div>
+                    </div>
+
+                    {/* Inversion Trap Meter */}
+                    <div className="rounded-xl border border-slate-200/90 bg-slate-50/90 px-3 py-2 space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-medium text-slate-700">Thermal Inversion Cap</span>
+                        <span className="font-bold text-amber-800">
+                          {aqi.inversionRisk.label} · {aqi.inversionRisk.score}/100
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-amber-600"
+                          animate={{ width: `${aqi.inversionRisk.score}%` }}
+                          transition={{ duration: 0.4 }}
+                        />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border border-teal-200 bg-teal-50/70 px-2.5 py-2">
+                      <div className="rounded-xl border border-teal-200 bg-teal-50/80 px-2.5 py-2">
                         <div className="text-[10px] text-teal-700 font-medium">Indoor Target</div>
                         <div className="text-sm font-extrabold text-teal-900">
                           <AnimatedCounter value={liveImpact.optimizedIndoorPm25} suffix=" µg/m³" />
                         </div>
                       </div>
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/90 px-2.5 py-2">
                         <div className="text-[10px] text-slate-500 font-medium">Dose Saved</div>
                         <div className="text-sm font-extrabold text-slate-900">
                           -<AnimatedCounter value={liveImpact.inhaledDoseSavedPct} suffix="%" />
