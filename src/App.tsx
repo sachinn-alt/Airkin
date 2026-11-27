@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
-  AlertTriangle,
-  CloudFog,
-  Compass,
-  Cpu,
-  MapPin,
+  Activity,
+  Chart,
+  Danger,
+  Discovery,
+  Filter,
+  Location,
+  People,
   Search,
-  ShieldAlert,
-  SlidersHorizontal,
-  Thermometer,
-  Users,
-  Wind,
-} from 'lucide-react';
+  ShieldDone,
+} from 'react-iconly';
 import {
   calculateImpactSummary,
   getDefaultSelectedActionIds,
@@ -28,6 +27,7 @@ import { ImpactSimulator } from './components/ImpactSimulator';
 import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
+import { AnimatedCounter, AqiGaugeRing, SpotlightCard } from './components/ui/AceternityPrimitives';
 
 type AppPage = 'overview' | 'simulator' | 'community';
 
@@ -215,14 +215,14 @@ export default function App() {
     [profile, aqi?.current.pm25, selectedActionIds]
   );
 
-  const navItems: Array<{ id: AppPage; label: string; icon: typeof Compass }> = [
-    { id: 'overview', label: 'Live Smog & Daily Plan', icon: Compass },
-    { id: 'simulator', label: 'Household & Impact Simulator', icon: SlidersHorizontal },
-    { id: 'community', label: 'Community & Guide', icon: Users },
+  const navItems: Array<{ id: AppPage; label: string; icon: typeof Discovery }> = [
+    { id: 'overview', label: 'Live Smog & Daily Plan', icon: Discovery },
+    { id: 'simulator', label: 'Household & Impact Simulator', icon: Filter },
+    { id: 'community', label: 'Community & Guide', icon: People },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7] text-slate-900 pb-24">
+    <div className="min-h-screen bg-[#F6F8F7] text-slate-900 pb-20">
       <a
         href="#main-dashboard"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-teal-700 focus:px-3 focus:py-2 focus:text-white focus:font-semibold"
@@ -230,18 +230,16 @@ export default function App() {
         Skip to main dashboard
       </a>
 
-      {/* Clean Light Header */}
+      {/* Compact Sticky Header */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mx-auto max-w-7xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
-              <CloudFog className="h-5 w-5" aria-hidden="true" />
-            </div>
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
+              <ShieldDone set="two-tone" size="small" />
+            </span>
             <div>
-              <h1 className="text-base font-bold tracking-tight text-slate-900">AirKin</h1>
-              <p className="text-[11px] text-slate-500">
-                Indian Winter Smog & Clean-Air Family Assistant
-              </p>
+              <h1 className="text-sm font-bold tracking-tight text-slate-900">AirKin</h1>
+              <p className="text-[10px] text-slate-500">Indian Winter Smog Assistant</p>
             </div>
           </div>
 
@@ -251,36 +249,35 @@ export default function App() {
                 Search Indian city for live air quality
               </label>
               <div className="relative">
-                <MapPin
-                  className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400"
-                  aria-hidden="true"
-                />
+                <span className="pointer-events-none absolute left-2.5 top-2 text-slate-400">
+                  <Location set="light" size={14} />
+                </span>
                 <input
                   id="city-search-input"
                   type="text"
                   value={cityInput}
                   onChange={(e) => setCityInput(e.target.value)}
-                  placeholder="Search Indian city..."
-                  className="w-44 sm:w-52 rounded-xl border border-slate-300 bg-white pl-8 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400"
+                  placeholder="Indian city..."
+                  className="w-40 sm:w-48 rounded-xl border border-slate-300 bg-white pl-8 pr-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400"
                 />
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-200 transition cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-200 transition cursor-pointer"
               >
-                <Search className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Check</span>
+                <Search set="light" size={14} />
+                <span>Go</span>
               </button>
             </form>
 
             <span
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium ${
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium ${
                 geminiActive
                   ? 'border-teal-200 bg-teal-50 text-teal-800'
                   : 'border-amber-200 bg-amber-50 text-amber-800'
               }`}
             >
-              <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
+              <Activity set="two-tone" size={14} />
               <span>
                 {geminiActive ? 'Gemini Flash Active' : 'Server GEMINI_API_KEY Required'}
               </span>
@@ -288,27 +285,32 @@ export default function App() {
           </div>
         </div>
 
-        {/* City Chips + 3-Page Navigation */}
-        <div className="mx-auto max-w-6xl px-4 pb-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-            <span className="text-slate-500 mr-1">Indian winter hotspots:</span>
-            {QUICK_CITIES.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => handleSelectQuickCity(c)}
-                className={`rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
-                  aqi?.city.toLowerCase() === c.toLowerCase()
-                    ? 'border-teal-600 bg-teal-50 text-teal-800 font-semibold'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+        {/* City Pills + Animated Motion Page Switcher */}
+        <div className="mx-auto max-w-7xl px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1 text-[11px]">
+            {QUICK_CITIES.map((c) => {
+              const active = aqi?.city.toLowerCase() === c.toLowerCase();
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => handleSelectQuickCity(c)}
+                  className={`rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
+                    active
+                      ? 'border-teal-600 bg-teal-50 text-teal-800 font-semibold'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  {c}
+                </button>
+              );
+            })}
           </div>
 
-          <nav aria-label="AirKin Views" className="flex flex-wrap gap-1.5">
+          <nav
+            aria-label="AirKin Views"
+            className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1"
+          >
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = activePage === item.id;
@@ -318,14 +320,25 @@ export default function App() {
                   type="button"
                   onClick={() => setActivePage(item.id)}
                   aria-current={active ? 'page' : undefined}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
-                    active
-                      ? 'bg-teal-700 text-white shadow-xs'
-                      : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  className={`relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                    active ? 'text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>{item.label}</span>
+                  {active && (
+                    <motion.span
+                      layoutId="active-page-pill"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                      className="absolute inset-0 rounded-lg bg-teal-700"
+                    />
+                  )}
+                  <span className="relative z-10 inline-flex items-center gap-1.5">
+                    <Icon
+                      set={active ? 'bold' : 'light'}
+                      size={14}
+                      primaryColor={active ? '#ffffff' : '#475569'}
+                    />
+                    <span>{item.label}</span>
+                  </span>
                 </button>
               );
             })}
@@ -333,143 +346,163 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main-dashboard" className="mx-auto max-w-6xl px-4 py-6 space-y-6">
+      <main id="main-dashboard" className="mx-auto max-w-7xl px-4 py-4 space-y-4">
         {errorMsg && (
           <div
             role="alert"
-            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 flex items-center gap-2"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-800 flex items-center gap-2"
           >
-            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <Danger set="two-tone" size="small" primaryColor="#be123c" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* PAGE 1: LIVE SMOG & DAILY PLAN */}
-        {activePage === 'overview' && (
-          <div className="space-y-6">
-            {aqi && (
-              <section
-                aria-label="Current Local Air Quality and Thermal Inversion Status"
-                className="grid grid-cols-1 lg:grid-cols-12 gap-4"
-              >
-                <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col justify-between gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs text-slate-500">
-                        {aqi.city}, India ·{' '}
-                        <span className="text-slate-400">
-                          {aqi.source === 'open-meteo-live'
-                            ? 'Live Open-Meteo Feed'
-                            : 'Offline Indian Profile'}
+        <AnimatePresence mode="wait">
+          {/* PAGE 1: LIVE SMOG & DAILY PLAN */}
+          {activePage === 'overview' && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
+              {aqi && (
+                <section
+                  aria-label="Current Local Air Quality and Thermal Inversion Status"
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-4"
+                >
+                  {/* Left Bento Gauge Card */}
+                  <SpotlightCard className="lg:col-span-4 p-4 flex flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <AqiGaugeRing
+                        aqi={aqi.current.usAqi}
+                        label={aqi.severity.label}
+                        colorToken={aqi.severity.colorToken}
+                      />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="text-[11px] text-slate-500">
+                          {aqi.city}, IN ·{' '}
+                          {aqi.source === 'open-meteo-live' ? 'Live' : 'Preset'}
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-semibold ${
+                            SEVERITY_BADGE_STYLES[aqi.severity.colorToken]
+                          }`}
+                        >
+                          <Chart set="two-tone" size={13} />
+                          {aqi.severity.label}
                         </span>
-                      </div>
-                      <div className="mt-1 flex items-baseline gap-2.5">
-                        <span className="text-4xl font-extrabold tracking-tight text-slate-900">
-                          {aqi.current.usAqi}
-                        </span>
-                        <span className="text-xs font-medium text-slate-500">US AQI</span>
+                        <div className="text-[11px] text-slate-600">
+                          Inversion: <strong className="text-amber-800">{aqi.inversionRisk.label}</strong> ({aqi.inversionRisk.score}/100)
+                        </div>
                       </div>
                     </div>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
-                        SEVERITY_BADGE_STYLES[aqi.severity.colorToken]
-                      }`}
-                    >
-                      <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                      {aqi.severity.label}
-                    </span>
+
+                    <div className="grid grid-cols-4 gap-1.5 text-center">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                        <div className="text-[10px] text-slate-500">PM2.5</div>
+                        <div className="text-xs font-bold text-amber-800">
+                          <AnimatedCounter value={aqi.current.pm25} decimals={1} />
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                        <div className="text-[10px] text-slate-500">PM10</div>
+                        <div className="text-xs font-bold text-slate-800">
+                          <AnimatedCounter value={aqi.current.pm10} decimals={1} />
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                        <div className="text-[10px] text-slate-500">Temp</div>
+                        <div className="text-xs font-bold text-sky-800">
+                          {aqi.current.temperatureC}°C
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 py-1.5 px-1">
+                        <div className="text-[10px] text-slate-500">Wind</div>
+                        <div className="text-xs font-bold text-teal-800">
+                          {aqi.current.windSpeedKmh} km/h
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Protection Snapshot */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-teal-200 bg-teal-50/70 px-2.5 py-2">
+                        <div className="text-[10px] text-teal-700 font-medium">Indoor Target</div>
+                        <div className="text-sm font-extrabold text-teal-900">
+                          <AnimatedCounter value={liveImpact.optimizedIndoorPm25} suffix=" µg/m³" />
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
+                        <div className="text-[10px] text-slate-500 font-medium">Dose Saved</div>
+                        <div className="text-sm font-extrabold text-slate-900">
+                          -<AnimatedCounter value={liveImpact.inhaledDoseSavedPct} suffix="%" />
+                        </div>
+                      </div>
+                    </div>
+                  </SpotlightCard>
+
+                  {/* Right 24h Smog Curve */}
+                  <div className="lg:col-span-8">
+                    <SmogChart
+                      hourly={aqi.hourly}
+                      ventilationWindow={aqi.ventilationWindow}
+                      city={aqi.city}
+                    />
                   </div>
+                </section>
+              )}
 
-                  <p className="text-xs text-slate-600">{aqi.severity.summary}</p>
+              <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
+            </motion.div>
+          )}
 
-                  <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <div className="text-[10px] text-slate-500">PM2.5</div>
-                      <div className="text-sm font-bold text-amber-800">{aqi.current.pm25}</div>
-                      <div className="text-[10px] text-slate-500">µg/m³</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <div className="text-[10px] text-slate-500">PM10</div>
-                      <div className="text-sm font-bold text-slate-800">{aqi.current.pm10}</div>
-                      <div className="text-[10px] text-slate-500">µg/m³</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-                        <Thermometer className="h-3 w-3" aria-hidden="true" /> Temp
-                      </div>
-                      <div className="text-sm font-bold text-sky-800">{aqi.current.temperatureC}°C</div>
-                      <div className="text-[10px] text-slate-500">{aqi.current.humidityPct}% RH</div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-                        <Wind className="h-3 w-3" aria-hidden="true" /> Wind
-                      </div>
-                      <div className="text-sm font-bold text-teal-800">
-                        {aqi.current.windSpeedKmh}
-                      </div>
-                      <div className="text-[10px] text-slate-500">km/h</div>
-                    </div>
-                  </div>
+          {/* PAGE 2: HOUSEHOLD PROFILE & IMPACT SIMULATOR */}
+          {activePage === 'simulator' && (
+            <motion.div
+              key="simulator"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start"
+            >
+              <div className="lg:col-span-4">
+                <ProfilePanel
+                  profile={profile}
+                  onChange={setProfile}
+                  onRegeneratePlan={() => {
+                    void loadCityAndPlan(profile, selectedActionIds);
+                    setActivePage('overview');
+                  }}
+                  isLoadingPlan={isLoadingPlan}
+                />
+              </div>
+              <div className="lg:col-span-8">
+                <ImpactSimulator
+                  selectedActionIds={selectedActionIds}
+                  onToggleAction={handleToggleAction}
+                  impact={liveImpact}
+                />
+              </div>
+            </motion.div>
+          )}
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-800">
-                        Winter Thermal Inversion Trap
-                      </span>
-                      <span className="font-bold text-amber-800">
-                        {aqi.inversionRisk.label} ({aqi.inversionRisk.score}/100)
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600">{aqi.inversionRisk.explanation}</p>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-7 flex flex-col justify-between gap-3">
-                  <SmogChart
-                    hourly={aqi.hourly}
-                    ventilationWindow={aqi.ventilationWindow}
-                    city={aqi.city}
-                  />
-                  <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-xs text-teal-900">
-                    <strong>Ventilation Advisory: </strong>
-                    {aqi.ventilationWindow.advisory}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
-          </div>
-        )}
-
-        {/* PAGE 2: HOUSEHOLD PROFILE & IMPACT SIMULATOR */}
-        {activePage === 'simulator' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            <div className="lg:col-span-4">
-              <ProfilePanel
-                profile={profile}
-                onChange={setProfile}
-                onRegeneratePlan={() => {
-                  void loadCityAndPlan(profile, selectedActionIds);
-                  setActivePage('overview');
-                }}
-                isLoadingPlan={isLoadingPlan}
-              />
-            </div>
-            <div className="lg:col-span-8">
-              <ImpactSimulator
-                selectedActionIds={selectedActionIds}
-                onToggleAction={handleToggleAction}
-                impact={liveImpact}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* PAGE 3: COMMUNITY ACTION & METHODOLOGY */}
-        {activePage === 'community' && (
-          <CommunityGuide aqi={aqi} profile={profile} impact={liveImpact} />
-        )}
+          {/* PAGE 3: COMMUNITY ACTION & METHODOLOGY */}
+          {activePage === 'community' && (
+            <motion.div
+              key="community"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+            >
+              <CommunityGuide aqi={aqi} profile={profile} impact={liveImpact} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Hovering Floating Ask AirKin Coach */}

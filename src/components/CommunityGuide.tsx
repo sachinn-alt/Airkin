@@ -1,6 +1,17 @@
-import { Check, Copy, BookOpen, Hammer, Megaphone, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Document,
+  InfoCircle,
+  People,
+  ShieldDone,
+  TickSquare,
+  Work,
+} from 'react-iconly';
 import type { AirQualitySnapshot, HouseholdProfile, ImpactSummary } from '@shared/types';
+import { AnimatedCounter, SpotlightCard } from './ui/AceternityPrimitives';
 
 interface CommunityGuideProps {
   aqi: AirQualitySnapshot | null;
@@ -8,8 +19,17 @@ interface CommunityGuideProps {
   impact: ImpactSummary;
 }
 
+const DIY_STEPS = [
+  '4 pleated MERV-13 filters (20×20×1 in) + 1 20" box fan',
+  'Tape filters into a cube (arrows pointing inward)',
+  'Seal cardboard bottom + vertical corners with duct tape',
+  'Mount fan on top blowing up; run in bedroom overnight',
+];
+
 export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
   const [copied, setCopied] = useState(false);
+  const [checkedDiy, setCheckedDiy] = useState<Record<number, boolean>>({});
+  const [showModelMath, setShowModelMath] = useState(false);
 
   const city = aqi?.city ?? profile.city;
   const usAqi = aqi?.current.usAqi ?? 200;
@@ -19,124 +39,178 @@ export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
   const peakHour = aqi?.ventilationWindow.peakHour ?? '23:00';
 
   const rwaBriefing = [
-    `AirKin Neighborhood Clean-Air Alert — ${city}`,
-    `Today's US AQI: ${usAqi} (PM2.5: ${pm25} µg/m³)`,
-    `Safe Window Airing: ${winStart}–${winEnd} only | Avoid opening windows around ${peakHour}`,
-    `3 Block Actions Today:`,
-    `1) School/Gate No-Idling: Switch off engines while waiting outside gates.`,
-    `2) Zero Evening Leaf/Waste Fires: Evening thermal inversions trap smoke until morning.`,
-    `3) Clean Room Focus: Wet-mop floors and run HEPA / MERV-13 Corsi-Rosenthal filtration.`,
-    `Impact if ${impact.communityBlockMultiplier.households} homes join: ${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 & ${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} tonnes CO2e prevented this winter.`,
+    `AirKin Alert — ${city} | US AQI ${usAqi} (PM2.5: ${pm25} µg/m³)`,
+    `Safe Airing: ${winStart}–${winEnd} | Avoid: ${peakHour}`,
+    `• Gate engines OFF at school pickup`,
+    `• Zero evening leaf/trash fires`,
+    `• Wet-mop + MERV-13 / HEPA indoors`,
+    `Block impact (${impact.communityBlockMultiplier.households} homes): -${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 & -${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} t CO2e/winter`,
   ].join('\n');
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(rwaBriefing);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
     }
   };
 
+  const completedCount = Object.values(checkedDiy).filter(Boolean).length;
+
   return (
-    <div className="space-y-6">
-      {/* Shareable Community Briefing */}
-      <section
-        aria-labelledby="community-briefing-heading"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      {/* Left: Shareable RWA & Parent Alert */}
+      <SpotlightCard className="lg:col-span-7 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4 text-teal-700" aria-hidden="true" />
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+              <People set="two-tone" size="small" />
+            </span>
             <div>
-              <h2 id="community-briefing-heading" className="text-base font-semibold text-slate-900">
-                RWA & School-Group Clean-Air Briefing ({city})
+              <h2
+                id="community-briefing-heading"
+                className="text-sm font-semibold text-slate-900"
+              >
+                RWA & School-Group Clean-Air Briefing
               </h2>
-              <p className="text-xs text-slate-600">
-                Copy this daily advisory directly into apartment, resident welfare association (RWA), or parent groups.
-              </p>
+              <p className="text-[11px] text-slate-500">1-click WhatsApp / resident alert for {city}</p>
             </div>
           </div>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.97 }}
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800 transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition cursor-pointer"
           >
             {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Copied to Clipboard</span>
-              </>
+              <TickSquare set="bold" size={14} primaryColor="#ffffff" />
             ) : (
-              <>
-                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Copy Neighborhood Alert</span>
-              </>
+              <Document set="light" size={14} primaryColor="#ffffff" />
             )}
-          </button>
+            <span>{copied ? 'Copied' : 'Copy Alert'}</span>
+          </motion.button>
         </div>
 
-        <pre className="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-800 font-sans">
+        <pre className="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs leading-relaxed text-slate-800 font-sans">
           {rwaBriefing}
         </pre>
-      </section>
 
-      {/* Practical Guides Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <section
-          aria-labelledby="diy-cr-heading"
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <Hammer className="h-4 w-4 text-amber-700" aria-hidden="true" />
-            <h3 id="diy-cr-heading" className="text-sm font-semibold text-slate-900">
-              Budget DIY Corsi-Rosenthal Filter Box
-            </h3>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+            <div className="text-base font-bold text-slate-900">
+              <AnimatedCounter value={impact.communityBlockMultiplier.households} />
+            </div>
+            <div className="text-[10px] text-slate-500">Block Homes</div>
           </div>
-          <p className="text-xs text-slate-600">
-            Achieves 400–600 CFM Clean Air Delivery Rate (CADR) for bedrooms at a fraction of commercial HEPA cost.
-          </p>
-          <ol className="list-decimal pl-4 space-y-1.5 text-xs text-slate-700">
-            <li>Source four pleated MERV-13 filters (20×20×1 in) and one standard 20-inch box fan.</li>
-            <li>Arrange filters in a 4-sided square cube with airflow arrows pointing inward.</li>
-            <li>Seal all vertical seams and a cardboard bottom plate tightly with wide duct tape.</li>
-            <li>Mount the box fan on top blowing upward and seal corners so air pulls strictly through the filters.</li>
-          </ol>
-        </section>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+            <div className="text-base font-bold text-indigo-800">
+              <AnimatedCounter value={impact.communityBlockMultiplier.seasonPm25AvoidedKg} decimals={1} suffix=" kg" />
+            </div>
+            <div className="text-[10px] text-slate-500">PM2.5 Cut</div>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+            <div className="text-base font-bold text-teal-800">
+              <AnimatedCounter value={impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} decimals={1} suffix=" t" />
+            </div>
+            <div className="text-[10px] text-slate-500">CO2e Cut</div>
+          </div>
+        </div>
+      </SpotlightCard>
 
-        <section
-          aria-labelledby="science-basis-heading"
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"
-        >
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-sky-700" aria-hidden="true" />
-            <h3 id="science-basis-heading" className="text-sm font-semibold text-slate-900">
-              Scientific Model & Assumptions
-            </h3>
+      {/* Right: Interactive DIY Build Checklist & Collapsible Assumptions */}
+      <div className="lg:col-span-5 space-y-4">
+        <SpotlightCard className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                <Work set="two-tone" size="small" />
+              </span>
+              <h3 className="text-sm font-semibold text-slate-900">DIY Corsi-Rosenthal Build</h3>
+            </div>
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+              {completedCount}/{DIY_STEPS.length} done
+            </span>
           </div>
-          <ul className="space-y-2 text-xs text-slate-700">
-            <li className="flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-700 mt-0.5" aria-hidden="true" />
-              <span>
-                <strong>Indoor Mass Balance:</strong> Penetration factors of 0.78 (drafty), 0.62 (average), and 0.45 (well-sealed) combined with indoor combustion baselines.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-700 mt-0.5" aria-hidden="true" />
-              <span>
-                <strong>Health Benchmarks:</strong> WHO 24h PM2.5 guideline (15 µg/m³) and Berkeley Earth 22 µg/m³ cigarette-equivalent scale.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-700 mt-0.5" aria-hidden="true" />
-              <span>
-                <strong>Indian Winter Season:</strong> Projections model a 14-week peak winter inversion season across {impact.communityBlockMultiplier.households} households.
-              </span>
-            </li>
-          </ul>
-        </section>
+
+          <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+            <motion.div
+              className="h-full bg-teal-600"
+              animate={{ width: `${(completedCount / DIY_STEPS.length) * 100}%` }}
+              transition={{ duration: 0.25 }}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            {DIY_STEPS.map((step, i) => {
+              const checked = Boolean(checkedDiy[i]);
+              return (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => setCheckedDiy((p) => ({ ...p, [i]: !p[i] }))}
+                  aria-pressed={checked}
+                  className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-xs transition cursor-pointer ${
+                    checked
+                      ? 'border-teal-300 bg-teal-50/70 text-slate-500 line-through'
+                      : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
+                  }`}
+                >
+                  <TickSquare
+                    set={checked ? 'bold' : 'light'}
+                    size={15}
+                    primaryColor={checked ? '#0f766e' : '#94a3b8'}
+                  />
+                  <span>{step}</span>
+                </button>
+              );
+            })}
+          </div>
+        </SpotlightCard>
+
+        <SpotlightCard className="p-4">
+          <button
+            type="button"
+            onClick={() => setShowModelMath((s) => !s)}
+            aria-expanded={showModelMath}
+            className="w-full flex items-center justify-between text-xs font-semibold text-slate-900 cursor-pointer"
+          >
+            <span className="inline-flex items-center gap-2">
+              <InfoCircle set="two-tone" size="small" primaryColor="#0369a1" />
+              Model Parameters & Assumptions
+            </span>
+            {showModelMath ? <ChevronUp set="light" size={16} /> : <ChevronDown set="light" size={16} />}
+          </button>
+
+          <AnimatePresence initial={false}>
+            {showModelMath && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5 text-[11px] text-slate-600">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldDone set="light" size={14} primaryColor="#0f766e" />
+                    <span>Infiltration: 0.78 drafty · 0.62 avg · 0.45 sealed</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ShieldDone set="light" size={14} primaryColor="#0f766e" />
+                    <span>WHO 24h target: 15 µg/m³ · Berkeley Earth: 22 µg/m³/cig</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ShieldDone set="light" size={14} primaryColor="#0f766e" />
+                    <span>Winter projection: 14-week Indian inversion season</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </SpotlightCard>
       </div>
     </div>
   );
