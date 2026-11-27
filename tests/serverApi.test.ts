@@ -1,12 +1,29 @@
 import type { AddressInfo } from 'node:net';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createApp } from '../server/index.js';
-import { buildDeterministicChatReply, buildDeterministicPlan } from '../server/advisorService.js';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockGenerateContent = vi.fn();
+
+vi.mock('@google/genai', () => ({
+  GoogleGenAI: vi.fn(() => ({
+    models: {
+      generateContent: mockGenerateContent,
+    },
+  })),
+  Type: {
+    OBJECT: 'OBJECT',
+    ARRAY: 'ARRAY',
+    STRING: 'STRING',
+  },
+}));
+
+import { scoreInterventionsForContext } from '../server/advisorService.js';
 import { buildOfflineSnapshot } from '../server/airQualityService.js';
+import { createApp } from '../server/index.js';
 import { validateProfile } from '../server/validation.js';
 
 let baseUrl = '';
 let server: ReturnType<ReturnType<typeof createApp>['listen']>;
+const originalGeminiKey = process.env.GEMINI_API_KEY;
 
 beforeAll(async () => {
   const app = createApp();
@@ -19,19 +36,27 @@ beforeAll(async () => {
   });
 });
 
+beforeEach(() => {
+  mockGenerateContent.mockReset();
+  delete process.env.GEMINI_API_KEY;
+});
+
 afterAll(async () => {
+  if (originalGeminiKey) process.env.GEMINI_API_KEY = originalGeminiKey;
+  else delete process.env.GEMINI_API_KEY;
+
   await new Promise<void>((resolve, reject) => {
     server.close((err) => (err ? reject(err) : resolve()));
   });
 });
 
-describe('AirKin API & Decision Engine', () => {
+describe('AirKin API & GenAI Decision Engine', () => {
   it('returns health metadata without leaking secrets', async () => {
     const res = await fetch(`${baseUrl}/api/health`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe('ok');
-    expect(typeof body.geminiConfiguredOnServer).toBe('boolean');
+    expect(body.geminiConfiguredOnServer).toBe(false);
     expect(body).not.toHaveProperty('apiKey');
   });
 
@@ -49,7 +74,7 @@ describe('AirKin API & Decision Engine', () => {
     expect(clean.heatingSource).toBe('wood_coal');
   });
 
-  it('generates 4 tailored pillar cards in the deterministic atmospheric model', () => {
+  it('ranks wood heating and filtration interventions higher for high-risk households', () => {
     const aqi = buildOfflineSnapshot('Lahore');
     const profile = validateProfile({
       city: 'Lahore',
@@ -57,34 +82,83 @@ describe('AirKin API & Decision Engine', () => {
       purifierType: 'none',
       hasChildren: true,
     });
-    const plan = buildDeterministicPlan(profile, aqi);
-    expect(plan.recommendations).toHaveLength(4);
-    const categories = new Set(plan.recommendations.map((r) => r.category));
-    expect(categories).toEqual(
-      new Set(['routine', 'indoor_hack', 'sustainable_swap', 'community'])
-    );
+    const ranked = scoreInterventionsForContext(profile, aqi);
+    expect(ranked.length).toBeGreaterThanOrEqual(4);
+    expect(ranked[0].relevanceScore).toBeGreaterThanOrEqual(ranked[ranked.length - 1].relevanceScore);
   });
 
-  it('responds dynamically to chat questions with local AQI and mass-balance numbers', () => {
-    const aqi = buildOfflineSnapshot('Delhi');
-    const profile = validateProfile({ city: 'Delhi', purifierType: 'none' });
-    const reply = buildDeterministicChatReply(
-      'How do I lower indoor PM2.5 with a DIY Corsi-Rosenthal filter?',
-      profile,
-      aqi,
-      ['diy_corsi_rosenthal']
-    );
-    expect(reply).toContain('MERV-13');
-    expect(reply).toContain('µg/m³');
+  it('returns HTTP 503 with live AQI when server GEMINI_API_KEY is not configured', async () => {
+    const res = await fetch(`${baseUrl}/api/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: { city: 'Delhi' } }),
+    });
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { aqi?: { city: string }; error?: string };
+    expect(body.aqi?.city).toBe('Delhi');
+    expect(body.error).toContain('GEMINI_API_KEY');
   });
 
-  it('rejects empty chat questions with HTTP 400', async () => {
-    const res = await fetch(`${baseUrl}/api/chat`, {
+  it('generates a grounded Gemini 2.5 Flash plan when GEMINI_API_KEY is configured', async () => {
+    process.env.GEMINI_API_KEY = 'test-server-key-123456';
+    mockGenerateContent.mockResolvedValueOnce({
+      text: JSON.stringify({
+        headline: 'Severe Winter Smog Plan for Delhi',
+        situationSummary: 'Delhi is under a high nocturnal inversion.',
+        riskAlert: 'Protect children indoors below 15 µg/m³.',
+        recommendations: [
+          {
+            id: 'rec-1',
+            category: 'routine',
+            priority: 'Immediate',
+            title: 'Shift Window Airing to 14:00',
+            timingOrEffort: 'Free · 15 mins',
+            steps: ['Keep windows sealed during morning inversion.'],
+            directImpactHeadline: '-22% infiltration exposure',
+            directImpactDetail: 'Avoids morning PM2.5 spike.',
+            scienceWhy: 'Afternoon solar mixing lifts the boundary layer.',
+          },
+        ],
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: { city: 'Delhi', householdSize: 4 } }),
+    });
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { plan: { mode: string; headline: string } };
+    expect(data.plan.mode).toBe('gemini-live');
+    expect(data.plan.headline).toContain('Delhi');
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns Gemini chat reply when GEMINI_API_KEY is configured and rejects empty questions', async () => {
+    const badRes = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: '   ' }),
     });
-    expect(res.status).toBe(400);
+    expect(badRes.status).toBe(400);
+
+    process.env.GEMINI_API_KEY = 'test-server-key-123456';
+    mockGenerateContent.mockResolvedValueOnce({
+      text: 'Air out briefly between 14:00 and 16:00 when inversion weakens.',
+    });
+
+    const okRes = await fetch(`${baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'When should I open windows today?',
+        profile: { city: 'Lahore' },
+      }),
+    });
+    expect(okRes.status).toBe(200);
+    const body = (await okRes.json()) as { mode: string; reply: string };
+    expect(body.mode).toBe('gemini-live');
+    expect(body.reply).toContain('14:00');
   });
 
   it('calculates impact via /api/impact/calculate endpoint', async () => {

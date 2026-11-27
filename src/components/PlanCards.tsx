@@ -1,10 +1,11 @@
-import { Check, Copy, Clock, Home, Leaf, Sparkles, Users } from 'lucide-react';
+import { AlertCircle, Check, Copy, Clock, Home, Leaf, Sparkles, Users } from 'lucide-react';
 import { useState } from 'react';
 import type { RecommendationCard, TailoredPlanResponse } from '@shared/types';
 
 interface PlanCardsProps {
   plan: TailoredPlanResponse | null;
   isLoading: boolean;
+  planError: string | null;
 }
 
 const CATEGORY_META: Record<
@@ -33,14 +34,34 @@ const CATEGORY_META: Record<
   },
 };
 
-export function PlanCards({ plan, isLoading }: PlanCardsProps) {
+export function PlanCards({ plan, isLoading, planError }: PlanCardsProps) {
   const [copied, setCopied] = useState(false);
 
   if (isLoading && !plan) {
     return (
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-center text-sm text-slate-400">
-        Generating personalized winter smog action plan...
+        Generating personalized Gemini 2.5 Flash winter smog action plan...
       </div>
+    );
+  }
+
+  if (planError && !plan) {
+    return (
+      <section
+        aria-labelledby="ai-plan-status"
+        className="rounded-2xl border border-amber-500/35 bg-amber-500/10 p-5 space-y-2"
+      >
+        <div className="flex items-center gap-2 text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <h2 id="ai-plan-status" className="text-sm font-semibold">
+            Gemini Action Plan Unavailable
+          </h2>
+        </div>
+        <p className="text-xs text-amber-100/90">{planError}</p>
+        <p className="text-[11px] text-amber-200/75">
+          Live air quality tracking, thermal inversion scoring, and the interactive mass-balance impact simulator above remain fully operational.
+        </p>
+      </section>
     );
   }
 
@@ -95,14 +116,8 @@ export function PlanCards({ plan, isLoading }: PlanCardsProps) {
                 </>
               )}
             </button>
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
-                plan.mode === 'gemini-live'
-                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                  : 'border-sky-500/40 bg-sky-500/15 text-sky-300'
-              }`}
-            >
-              {plan.mode === 'gemini-live' ? `AI: ${plan.modelUsed}` : plan.modelUsed}
+            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+              AI: {plan.modelUsed}
             </span>
           </div>
         </div>

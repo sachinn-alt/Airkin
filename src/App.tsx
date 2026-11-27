@@ -61,6 +61,7 @@ export default function App() {
   );
   const [aqi, setAqi] = useState<AirQualitySnapshot | null>(null);
   const [plan, setPlan] = useState<TailoredPlanResponse | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [isSendingChat, setIsSendingChat] = useState(false);
@@ -71,6 +72,7 @@ export default function App() {
     async (nextProfile: HouseholdProfile, actions: string[]) => {
       setIsLoadingPlan(true);
       setErrorMsg(null);
+      setPlanError(null);
       try {
         const res = await fetch('/api/plan', {
           method: 'POST',
@@ -80,13 +82,20 @@ export default function App() {
             selectedActionIds: actions,
           }),
         });
-        if (!res.ok) throw new Error(`Request failed (${res.status})`);
         const data = (await res.json()) as {
-          aqi: AirQualitySnapshot;
-          plan: TailoredPlanResponse;
+          aqi?: AirQualitySnapshot;
+          plan?: TailoredPlanResponse;
+          error?: string;
         };
-        setAqi(data.aqi);
-        setPlan(data.plan);
+        if (data.aqi) {
+          setAqi(data.aqi);
+        }
+        if (res.ok && data.plan) {
+          setPlan(data.plan);
+        } else {
+          setPlan(null);
+          setPlanError(data.error || `AI request failed (${res.status}).`);
+        }
       } catch {
         setErrorMsg('Could not reach the AirKin API server. Make sure the backend is running.');
       } finally {
@@ -155,7 +164,7 @@ export default function App() {
       const data = (await res.json()) as {
         reply?: string;
         error?: string;
-        mode?: 'gemini-live' | 'deterministic-model';
+        mode?: 'gemini-live';
       };
 
       const assistantMsg: ChatMessage = {
@@ -241,11 +250,13 @@ export default function App() {
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium ${
                 geminiActive
                   ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                  : 'border-sky-500/40 bg-sky-500/15 text-sky-300'
+                  : 'border-amber-500/40 bg-amber-500/15 text-amber-300'
               }`}
             >
               <Cpu className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{geminiActive ? 'Gemini 2.5 Flash Active' : 'Atmospheric Model Ready'}</span>
+              <span>
+                {geminiActive ? 'Gemini 2.5 Flash Active' : 'Server GEMINI_API_KEY Required'}
+              </span>
             </span>
           </div>
         </div>
@@ -392,7 +403,7 @@ export default function App() {
               onToggleAction={handleToggleAction}
               impact={liveImpact}
             />
-            <PlanCards plan={plan} isLoading={isLoadingPlan} />
+            <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
           </div>
         </div>
       </main>

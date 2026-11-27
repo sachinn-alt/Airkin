@@ -8,12 +8,19 @@ import type {
   ActionChoice,
   AirQualitySnapshot,
   HouseholdProfile,
-  ImpactSummary,
-  RecommendationCard,
   TailoredPlanResponse,
 } from '../shared/types.js';
 
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+export class AiServiceError extends Error {
+  readonly statusCode: number;
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = 'AiServiceError';
+    this.statusCode = statusCode;
+  }
+}
 
 export interface ScoredIntervention {
   action: ActionChoice;
@@ -24,8 +31,8 @@ export interface ScoredIntervention {
 }
 
 /**
- * Scores interventions against the live atmospheric snapshot and household context
- * so both the Gemini prompt and the offline atmospheric model rank priorities consistently.
+ * Ranks physical interventions using live atmospheric metrics and household parameters
+ * to supply grounded quantitative context to Gemini.
  */
 export function scoreInterventionsForContext(
   profile: HouseholdProfile,
@@ -81,7 +88,7 @@ export function scoreInterventionsForContext(
   }).sort((a, b) => b.relevanceScore - a.relevanceScore);
 }
 
-function buildContextPrompt(
+export function buildContextPrompt(
   profile: HouseholdProfile,
   aqi: AirQualitySnapshot,
   selectedActionIds: string[]
@@ -91,7 +98,7 @@ function buildContextPrompt(
     .slice(0, 5)
     .map(
       (r, idx) =>
-        `${idx + 1}. ${r.action.title} (Score ${r.relevanceScore}, -${r.computedIndoorDropUg} µg/m³ indoor, -${r.computedPm25Grams} g PM2.5/wk, -${r.computedCo2eKg} kg CO2e/wk)`
+        `${idx + 1}. ${r.action.title} (Priority Score ${r.relevanceScore}, -${r.computedIndoorDropUg} µg/m³ indoor, -${r.computedPm25Grams} g PM2.5/wk, -${r.computedCo2eKg} kg CO2e/wk)`
     )
     .join('\n');
 
@@ -121,7 +128,7 @@ HOUSEHOLD & LIFESTYLE PROFILE:
 - Air purification: ${profile.purifierType} | Window sealing: ${profile.homeSealLevel}
 - Outdoor exercise habit: ${profile.outdoorExerciseHabit ? 'Yes' : 'No'} | Budget: ${profile.budgetTier}
 
-TOP SCORED INTERVENTIONS FOR THIS HOUSEHOLD:
+TOP RANKED INTERVENTIONS FOR THIS HOUSEHOLD:
 ${ranked}
 
 QUANTITATIVE IMPACT SNAPSHOT (from mass-balance model):
@@ -132,140 +139,15 @@ QUANTITATIVE IMPACT SNAPSHOT (from mass-balance model):
 `.trim();
 }
 
-function buildDynamicCardFromScored(
-  scored: ScoredIntervention,
-  profile: HouseholdProfile,
-  aqi: AirQualitySnapshot,
-  impact: ImpactSummary
-): RecommendationCard {
-  const { action, computedIndoorDropUg, computedCo2eKg, computedPm25Grams } = scored;
-
-  const priority: RecommendationCard['priority'] =
-    action.category === 'community'
-      ? 'Community Multiplier'
-      : scored.relevanceScore >= 80
-        ? 'Immediate'
-        : 'High Impact';
-
-  const steps: string[] = [action.description];
-
-  if (action.id === 'ventilation_timing') {
-    steps.push(
-      `Keep windows closed around ${aqi.ventilationWindow.peakHour} (${aqi.ventilationWindow.peakPm25} µg/m³) and air out briefly at ${aqi.ventilationWindow.bestStartHour}–${aqi.ventilationWindow.bestEndHour} (${aqi.ventilationWindow.avgPm25InWindow} µg/m³).`
-    );
-    if (profile.outdoorExerciseHabit) {
-      steps.push(
-        'Move vigorous runs indoors whenever US AQI > 100 to prevent 3–5× deeper particulate deposition.'
-      );
-    }
-  } else if (action.id === 'diy_corsi_rosenthal') {
-    steps.push(
-      'Tape four 20×20 MERV-13 filters into a cube with a 20" box fan blowing upward; run continuously in the primary sleeping room.'
-    );
-    steps.push(
-      'Keep bedroom doors closed overnight so the 400–600 CFM Clean Air Delivery Rate achieves 4–6 air changes per hour.'
-    );
-  } else if (action.id === 'door_seal_wet_mop') {
-    steps.push(
-      'Place rolled damp towels or peel-and-stick foam strips along window sashes and exterior door thresholds.'
-    );
-    steps.push(
-      'Use a damp microfiber mop instead of a dry broom so settled soot is captured rather than kicked back into breathing height.'
-    );
-  } else if (action.id === 'clean_cooking_exhaust') {
-    steps.push(
-      `Because your kitchen uses ${profile.cookingFuel.replace('_', ' ')}, run an exhaust hood (or crack only the kitchen window with the door closed) while cooking.`
-    );
-    steps.push('Avoid indoor incense, candles, or mosquito coils during inversion days.');
-  } else if (action.id === 'n95_commute_shift') {
-    steps.push(
-      'Wear a snug N95/KN95/KF94 (child-sized KF94 for kids) outdoors whenever PM2.5 exceeds 55 µg/m³.'
-    );
-    steps.push('Enable cabin "Recirculate" airflow inside vehicles during arterial traffic.');
-  } else if (action.id === 'transit_carpool_swap') {
-    steps.push(
-      `Shift ${profile.commuteKmRoundTrip} km/day ${profile.commuteMode.replace('_', ' ')} trips to metro/bus or a 3-family carpool 3+ days per week.`
-    );
-    steps.push(
-      'Combine short errands (<3 km) into a single warm-engine loop to eliminate high-emitting cold starts.'
-    );
-  } else if (action.id === 'clean_heating_swap') {
-    steps.push(
-      'Heat only occupied bedrooms/living spaces with electric heat pumps or oil-filled radiators rather than solid fuel.'
-    );
-    steps.push('Draw heavy curtains at dusk to preserve daytime thermal gain.');
-  } else if (action.id === 'community_no_idle_burn') {
-    steps.push(
-      `Share ${aqi.city}'s daily ${aqi.ventilationWindow.bestStartHour}–${aqi.ventilationWindow.bestEndHour} safe airing window and AQI alert in local parent/apartment groups.`
-    );
-    steps.push(
-      'Establish a school-gate "Engines Off" pledge and coordinate municipal composting so zero evening leaf/trash fires are lit.'
+function getGeminiClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new AiServiceError(
+      'GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY to .env to enable Gemini 2.5 Flash.',
+      503
     );
   }
-
-  const impactParts: string[] = [];
-  if (computedIndoorDropUg > 0) impactParts.push(`-${computedIndoorDropUg} µg/m³ indoors`);
-  if (computedPm25Grams > 0) impactParts.push(`-${computedPm25Grams} g PM2.5/wk`);
-  if (computedCo2eKg > 0) impactParts.push(`-${computedCo2eKg} kg CO2e/wk`);
-  if (impactParts.length === 0) impactParts.push(`-${impact.inhaledDoseSavedPct}% total inhaled dose`);
-
-  return {
-    id: `rec-${action.id}`,
-    category: action.category,
-    priority,
-    title: action.title,
-    timingOrEffort: `${action.costLabel} · Priority Score ${scored.relevanceScore}`,
-    steps,
-    directImpactHeadline: impactParts.join(' · '),
-    directImpactDetail:
-      action.category === 'community'
-        ? `Scaling to ${impact.communityBlockMultiplier.households} homes avoids ${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5 & ${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} tonnes CO2e per winter.`
-        : `Contributes to lowering household indoor PM2.5 from ${impact.baselineIndoorPm25} to ${impact.optimizedIndoorPm25} µg/m³ and saving ${impact.inhaledDoseSavedUg.toLocaleString()} µg/day inhaled.`,
-    scienceWhy: action.impactMechanism,
-  };
-}
-
-export function buildDeterministicPlan(
-  profile: HouseholdProfile,
-  aqi: AirQualitySnapshot,
-  selectedActionIds?: string[]
-): TailoredPlanResponse {
-  const activeIds =
-    selectedActionIds && selectedActionIds.length > 0
-      ? selectedActionIds
-      : getDefaultSelectedActionIds(profile);
-
-  const impact = calculateImpactSummary(profile, aqi.current.pm25, activeIds);
-  const scored = scoreInterventionsForContext(profile, aqi);
-
-  const categories: RecommendationCard['category'][] = [
-    'routine',
-    'indoor_hack',
-    'sustainable_swap',
-    'community',
-  ];
-
-  const recommendations = categories
-    .map((cat) => scored.find((s) => s.action.category === cat))
-    .filter((item): item is ScoredIntervention => Boolean(item))
-    .map((item) => buildDynamicCardFromScored(item, profile, aqi, impact));
-
-  return {
-    mode: 'deterministic-model',
-    modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
-    headline:
-      aqi.current.usAqi >= 150
-        ? `Severe Winter Smog Action Plan for ${aqi.city} (AQI ${aqi.current.usAqi})`
-        : `Low-Emission & Clean-Air Plan for ${aqi.city} (AQI ${aqi.current.usAqi})`,
-    situationSummary: `${aqi.city} is currently at US AQI ${aqi.current.usAqi} (${aqi.severity.label}, PM2.5 ${aqi.current.pm25} µg/m³—${(
-      aqi.current.pm25 / 15
-    ).toFixed(1)}× the WHO 24h guideline) with ${aqi.inversionRisk.label.toLowerCase()} thermal inversion risk (${aqi.inversionRisk.score}/100).`,
-    riskAlert: impact.vulnerabilityNote,
-    recommendations,
-    impactSummary: impact,
-    disclaimer:
-      'Quantified estimates use live Open-Meteo ambient readings, an indoor single-compartment mass-balance infiltration model, and EPA/WHO benchmarks.',
-  };
+  return new GoogleGenAI({ apiKey });
 }
 
 export async function generateTailoredPlan(
@@ -278,17 +160,10 @@ export async function generateTailoredPlan(
       ? selectedActionIds
       : getDefaultSelectedActionIds(profile);
   const impact = calculateImpactSummary(profile, aqi.current.pm25, activeIds);
-  const apiKey = process.env.GEMINI_API_KEY;
+  const ai = getGeminiClient();
+  const context = buildContextPrompt(profile, aqi, activeIds);
 
-  if (!apiKey) {
-    return buildDeterministicPlan(profile, aqi, activeIds);
-  }
-
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const context = buildContextPrompt(profile, aqi, activeIds);
-
-    const prompt = `
+  const prompt = `
 You are AirKin, an atmospheric scientist and practical family/community clean-air coach.
 Generate a highly practical, empathetic, science-grounded winter smog action plan tailored specifically to this household's location, live air quality, thermal inversion dynamics, and lifestyle.
 
@@ -301,6 +176,7 @@ Requirements:
 4. Never suggest unsafe myths (e.g., ozone air purifiers, houseplants as sufficient smog filters, or cloth/surgical masks as equivalent to N95).
 `.trim();
 
+  try {
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents: prompt,
@@ -354,8 +230,8 @@ Requirements:
     });
 
     const parsed = JSON.parse(response.text || '{}') as Partial<TailoredPlanResponse>;
-    if (!parsed.recommendations || parsed.recommendations.length < 3) {
-      return buildDeterministicPlan(profile, aqi, activeIds);
+    if (!parsed.recommendations || parsed.recommendations.length < 1) {
+      throw new AiServiceError('Gemini returned an incomplete structured plan.', 502);
     }
 
     return {
@@ -369,160 +245,12 @@ Requirements:
       recommendations: parsed.recommendations.slice(0, 4),
       impactSummary: impact,
       disclaimer:
-        'Powered by Gemini grounded with live Open-Meteo AQI & an indoor mass-balance model. Seek medical care for acute respiratory distress.',
+        'Powered by Google Gemini 2.5 Flash grounded with live Open-Meteo AQI & an indoor mass-balance model. Seek medical care for acute respiratory distress.',
     };
-  } catch {
-    return buildDeterministicPlan(profile, aqi, activeIds);
+  } catch (err) {
+    if (err instanceof AiServiceError) throw err;
+    throw new AiServiceError('Unable to generate AI plan from Gemini upstream service.', 502);
   }
-}
-
-interface KnowledgeTopic {
-  id: string;
-  terms: string[];
-  compose: (ctx: {
-    profile: HouseholdProfile;
-    aqi: AirQualitySnapshot;
-    impact: ImpactSummary;
-    scored: ScoredIntervention[];
-  }) => string;
-}
-
-const KNOWLEDGE_TOPICS: KnowledgeTopic[] = [
-  {
-    id: 'ventilation_inversion',
-    terms: [
-      'window',
-      'ventilation',
-      'open',
-      'air',
-      'hour',
-      'time',
-      'morning',
-      'afternoon',
-      'inversion',
-      'fog',
-      'smog',
-    ],
-    compose: ({ aqi }) =>
-      `**Ventilation & Thermal Inversion Timing (${aqi.city})**\n- **Safe Airing Slot:** ${aqi.ventilationWindow.bestStartHour}–${aqi.ventilationWindow.bestEndHour} (avg ~${aqi.ventilationWindow.avgPm25InWindow} µg/m³ PM2.5), avoiding the **${aqi.ventilationWindow.peakHour}** peak (~${aqi.ventilationWindow.peakPm25} µg/m³).\n- **Atmospheric Physics:** Inversion risk is **${aqi.inversionRisk.label} (${aqi.inversionRisk.score}/100)** at ${aqi.current.temperatureC}°C and ${aqi.current.windSpeedKmh} km/h wind—${aqi.inversionRisk.explanation}\n- **Advisory:** ${aqi.ventilationWindow.advisory}`,
-  },
-  {
-    id: 'indoor_filtration_hacks',
-    terms: [
-      'indoor',
-      'purifier',
-      'hepa',
-      'corsi',
-      'rosenthal',
-      'merv',
-      'filter',
-      'box',
-      'fan',
-      'diy',
-      'mop',
-      'seal',
-      'house',
-      'room',
-      'home',
-      'plant',
-    ],
-    compose: ({ profile, aqi, impact }) =>
-      `**Indoor Air Quality Engineering (${profile.householdSize}-Person Home)**\n- **Model Output:** Outside PM2.5 is **${aqi.current.pm25} µg/m³**. Your baseline indoor level is **~${impact.baselineIndoorPm25} µg/m³** (${profile.homeSealLevel} envelope, ${profile.purifierType.replace('_', ' ')}), dropping to **~${impact.optimizedIndoorPm25} µg/m³ (-${impact.indoorReductionPct}%)** with active controls.\n- **Corsi-Rosenthal Build:** Four 20×20 MERV-13 filters taped to a 20" box fan (~$35–$55) deliver 400–600 CFM CADR (4–6 bedroom air changes/hour). Note: Houseplants clean <1% of particulate smog, and ozone "ionizers" worsen lung irritation—stick to mechanical MERV-13/HEPA filtration.\n- **Zero-Cost Steps:** Damp-mop instead of dry sweeping, seal door bottoms with damp towels, and isolate kitchen smoke with exhaust venting.`,
-  },
-  {
-    id: 'masking_health_kids',
-    terms: [
-      'mask',
-      'n95',
-      'kf94',
-      'kn95',
-      'kid',
-      'child',
-      'school',
-      'elder',
-      'senior',
-      'asthma',
-      'run',
-      'exercise',
-      'walk',
-      'breath',
-      'health',
-      'lung',
-    ],
-    compose: ({ profile, aqi, impact }) =>
-      `**Respiratory Protection & Daily Routines (US AQI ${aqi.current.usAqi})**\n- **Masking:** Fit-tested **N95/KN95/KF94** respirators filter ≥94–95% of 0.3 µm particulates; surgical or cloth masks allow 40–70% side leakage.\n- **Exertion Adjustment:** At PM2.5 **${aqi.current.pm25} µg/m³**, move cardio indoors—brisk outdoor exercise increases minute ventilation 3–5×.\n- **Direct Exposure Impact:** Your selected plan saves **${impact.inhaledDoseSavedUg.toLocaleString()} µg/day (${impact.inhaledDoseSavedPct}%)** of inhaled PM2.5 (~**${impact.cigaretteEquivalentsAvoidedPerWeek} fewer cigarette-equivalents/week** per person). ${profile.hasChildren || profile.hasRespiratoryCondition ? 'Priority protection is enabled for sensitive household members.' : ''}`,
-  },
-  {
-    id: 'sustainable_community_impact',
-    terms: [
-      'commute',
-      'car',
-      'bus',
-      'metro',
-      'transit',
-      'bike',
-      'heat',
-      'wood',
-      'gas',
-      'cook',
-      'induction',
-      'community',
-      'block',
-      'neighbor',
-      'burn',
-      'leaf',
-      'co2',
-      'emission',
-      'impact',
-    ],
-    compose: ({ profile, impact }) =>
-      `**Low-Emission Swaps & Community Block Impact**\n- **Household Footprint Prevented:** Your active choices prevent **${impact.weeklyPm25EmissionsSavedGrams} g of primary PM2.5** and **${impact.weeklyCo2eSavedKg} kg CO2e every week** (${impact.winterSeasonCo2eSavedKg} kg CO2e over 14 winter weeks).\n- **Why Winter Swaps Matter:** Cold-start car engines (${profile.commuteKmRoundTrip} km/day profile) emit 3–5× higher PM2.5 in the first 3 km, and residential solid-fuel heating or evening leaf fires inject dense plumes straight into nocturnal inversions.\n- **Block Multiplier (${impact.communityBlockMultiplier.households} Homes):** Collective adoption prevents **${impact.communityBlockMultiplier.seasonPm25AvoidedKg} kg PM2.5** and **${impact.communityBlockMultiplier.seasonCo2eAvoidedTonnes} tonnes CO2e** this winter.`,
-  },
-];
-
-/**
- * Composes an offline scientific response using weighted token-overlap scoring across
- * domain knowledge modules combined with live atmospheric & mass-balance calculations.
- */
-export function buildDeterministicChatReply(
-  question: string,
-  profile: HouseholdProfile,
-  aqi: AirQualitySnapshot,
-  selectedActionIds: string[]
-): string {
-  const impact = calculateImpactSummary(profile, aqi.current.pm25, selectedActionIds);
-  const scored = scoreInterventionsForContext(profile, aqi);
-  const tokens = question
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter((t) => t.length >= 2);
-
-  const rankedTopics = KNOWLEDGE_TOPICS.map((topic) => {
-    let overlap = 0;
-    for (const token of tokens) {
-      if (topic.terms.some((term) => term.includes(token) || token.includes(term))) {
-        overlap += 1;
-      }
-    }
-    return { topic, overlap };
-  }).sort((a, b) => b.overlap - a.overlap);
-
-  const topMatches = rankedTopics.filter((t) => t.overlap > 0).slice(0, 2);
-
-  if (topMatches.length === 0) {
-    const topAction = scored[0];
-    return [
-      `**AirKin Scientific Briefing — ${aqi.city} (US AQI ${aqi.current.usAqi} · ${aqi.severity.label})**`,
-      `- **Highest-Impact Next Step:** *${topAction.action.title}* (Priority Score ${topAction.relevanceScore}; ${topAction.action.impactMechanism})`,
-      `- **Indoor Exposure Model:** Baseline **${impact.baselineIndoorPm25} µg/m³** → Protected **${impact.optimizedIndoorPm25} µg/m³** (**-${impact.indoorReductionPct}%**), saving **${impact.inhaledDoseSavedUg.toLocaleString()} µg/day** inhaled across ${profile.householdSize} people.`,
-      `- **Safe Airing & Community Impact:** Ventilate briefly around **${aqi.ventilationWindow.bestStartHour}–${aqi.ventilationWindow.bestEndHour}** (~${aqi.ventilationWindow.avgPm25InWindow} µg/m³). Your weekly emissions saved: **${impact.weeklyPm25EmissionsSavedGrams} g PM2.5** & **${impact.weeklyCo2eSavedKg} kg CO2e**.`,
-    ].join('\n\n');
-  }
-
-  return topMatches
-    .map((m) => m.topic.compose({ profile, aqi, impact, scored }))
-    .join('\n\n');
 }
 
 export async function generateChatReply(params: {
@@ -531,31 +259,20 @@ export async function generateChatReply(params: {
   profile: HouseholdProfile;
   aqi: AirQualitySnapshot;
   selectedActionIds: string[];
-}): Promise<{ reply: string; mode: 'gemini-live' | 'deterministic-model'; modelUsed: string }> {
+}): Promise<{ reply: string; mode: 'gemini-live'; modelUsed: string }> {
   const { question, history, profile, aqi, selectedActionIds } = params;
-  const apiKey = process.env.GEMINI_API_KEY;
+  const ai = getGeminiClient();
+  const context = buildContextPrompt(profile, aqi, selectedActionIds);
+  const catalogSummary = ACTION_CATALOG.map(
+    (a) => `- ${a.title} (${a.costLabel}): ${a.impactMechanism}`
+  ).join('\n');
 
-  if (!apiKey) {
-    return {
-      reply: buildDeterministicChatReply(question, profile, aqi, selectedActionIds),
-      mode: 'deterministic-model',
-      modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
-    };
-  }
+  const conversationText = history
+    .slice(-8)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n');
 
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const context = buildContextPrompt(profile, aqi, selectedActionIds);
-    const catalogSummary = ACTION_CATALOG.map(
-      (a) => `- ${a.title} (${a.costLabel}): ${a.impactMechanism}`
-    ).join('\n');
-
-    const conversationText = history
-      .slice(-8)
-      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n');
-
-    const prompt = `
+  const prompt = `
 System Role: You are AirKin, a practical, empathetic, scientifically accurate urban air-quality & winter-smog assistant for families and communities.
 Always:
 - Tailor advice to the user's live local AQI, thermal inversion risk, ventilation window, and household profile below.
@@ -574,6 +291,7 @@ ${conversationText || '(New conversation)'}
 User's latest question: ${question}
 `.trim();
 
+  try {
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents: prompt,
@@ -582,7 +300,7 @@ User's latest question: ${question}
 
     const text = (response.text || '').trim();
     if (!text) {
-      throw new Error('Empty Gemini response');
+      throw new AiServiceError('Gemini returned an empty response.', 502);
     }
 
     return {
@@ -590,11 +308,8 @@ User's latest question: ${question}
       mode: 'gemini-live',
       modelUsed: DEFAULT_MODEL,
     };
-  } catch {
-    return {
-      reply: buildDeterministicChatReply(question, profile, aqi, selectedActionIds),
-      mode: 'deterministic-model',
-      modelUsed: 'AirKin Atmospheric & Mass-Balance Model',
-    };
+  } catch (err) {
+    if (err instanceof AiServiceError) throw err;
+    throw new AiServiceError('Unable to reach Gemini upstream service.', 502);
   }
 }

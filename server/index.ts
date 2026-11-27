@@ -4,8 +4,12 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ACTION_CATALOG, calculateImpactSummary, getDefaultSelectedActionIds } from '../shared/impactEngine.js';
-import { generateChatReply, generateTailoredPlan } from './advisorService.js';
+import {
+  ACTION_CATALOG,
+  calculateImpactSummary,
+  getDefaultSelectedActionIds,
+} from '../shared/impactEngine.js';
+import { AiServiceError, generateChatReply, generateTailoredPlan } from './advisorService.js';
 import { fetchAirQualityForCity, SMOG_CITY_PRESETS } from './airQualityService.js';
 import {
   sanitizeText,
@@ -50,7 +54,7 @@ export function createApp() {
   app.get('/api/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      geminiConfiguredOnServer: Boolean(process.env.GEMINI_API_KEY),
+      geminiConfiguredOnServer: Boolean(process.env.GEMINI_API_KEY?.trim()),
       model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       timestamp: new Date().toISOString(),
     });
@@ -92,10 +96,17 @@ export function createApp() {
     }
     const profile = validateProfile(req.body?.profile);
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
-
     const aqi = await fetchAirQualityForCity(profile.city);
-    const plan = await generateTailoredPlan(profile, aqi, selectedActionIds);
-    res.json({ aqi, plan });
+
+    try {
+      const plan = await generateTailoredPlan(profile, aqi, selectedActionIds);
+      res.json({ aqi, plan });
+    } catch (err) {
+      const status = err instanceof AiServiceError ? err.statusCode : 500;
+      const message =
+        err instanceof AiServiceError ? err.message : 'Unable to generate tailored AI plan.';
+      res.status(status).json({ aqi, error: message });
+    }
   });
 
   app.post('/api/chat', async (req: Request, res: Response) => {
@@ -113,16 +124,23 @@ export function createApp() {
     const profile = validateProfile(req.body?.profile);
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
     const history = validateChatHistory(req.body?.history);
-
     const aqi = await fetchAirQualityForCity(profile.city);
-    const result = await generateChatReply({
-      question,
-      history,
-      profile,
-      aqi,
-      selectedActionIds,
-    });
-    res.json(result);
+
+    try {
+      const result = await generateChatReply({
+        question,
+        history,
+        profile,
+        aqi,
+        selectedActionIds,
+      });
+      res.json(result);
+    } catch (err) {
+      const status = err instanceof AiServiceError ? err.statusCode : 500;
+      const message =
+        err instanceof AiServiceError ? err.message : 'Unable to generate AI response.';
+      res.status(status).json({ error: message });
+    }
   });
 
   // Serve built frontend in production if dist/ exists

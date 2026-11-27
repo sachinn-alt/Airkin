@@ -139,7 +139,7 @@ export interface RecommendationCard {
 }
 
 export interface TailoredPlanResponse {
-  mode: 'gemini-live' | 'deterministic-model';
+  mode: 'gemini-live';
   modelUsed: string;
   headline: string;
   situationSummary: string;
@@ -154,5 +154,5 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
-  mode?: 'gemini-live' | 'deterministic-model';
+  mode?: 'gemini-live';
 }
