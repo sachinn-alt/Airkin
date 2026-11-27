@@ -32,7 +32,7 @@ export function SpotlightCard({ children, className }: SpotlightCardProps) {
       }}
       onPointerLeave={() => setPos((p) => ({ ...p, active: false }))}
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xs transition-shadow hover:shadow-md',
+        'relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/88 backdrop-blur-md shadow-xs transition-shadow hover:shadow-md',
         className
       )}
     >

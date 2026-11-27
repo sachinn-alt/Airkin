@@ -23,6 +23,7 @@ import type {
   TailoredPlanResponse,
 } from '@shared/types';
 import { AdvisorChat } from './components/AdvisorChat';
+import { AmbientWeatherBackdrop } from './components/AmbientWeatherBackdrop';
 import { CommunityGuide } from './components/CommunityGuide';
 import { ImpactSimulator } from './components/ImpactSimulator';
 import { IndiaLiveFeed } from './components/IndiaLiveFeed';
@@ -233,7 +234,10 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7] text-slate-900 pb-20">
+    <div className="relative min-h-screen text-slate-900 pb-20">
+      <AmbientWeatherBackdrop aqi={aqi} />
+
+      <div className="relative z-10">
       <a
         href="#main-dashboard"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-teal-700 focus:px-3 focus:py-2 focus:text-white focus:font-semibold"
@@ -242,7 +246,7 @@ export default function App() {
       </a>
 
       {/* Compact Sticky Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
@@ -533,6 +537,7 @@ export default function App() {
         onSendMessage={handleSendMessage}
         isSending={isSendingChat}
       />
+      </div>
     </div>
   );
 }
