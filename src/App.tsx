@@ -26,7 +26,7 @@ import { AdvisorChat } from './components/AdvisorChat';
 import { AmbientWeatherBackdrop } from './components/AmbientWeatherBackdrop';
 import { CommunityGuide } from './components/CommunityGuide';
 import { ImpactSimulator } from './components/ImpactSimulator';
-import { IndiaLiveFeed } from './components/IndiaLiveFeed';
+import { CPCB_CITY_STYLES, IndiaLiveFeed } from './components/IndiaLiveFeed';
 import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
@@ -300,23 +300,36 @@ export default function App() {
           </div>
         </div>
 
-        {/* City Pills + Animated Motion Page Switcher */}
+        {/* Color-Coded City Pills + Animated Motion Page Switcher */}
         <div className="mx-auto max-w-7xl px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1 text-[11px]">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
             {QUICK_CITIES.map((c) => {
               const active = aqi?.city.toLowerCase() === c.toLowerCase();
+              const feedCity = indiaFeed?.cities.find(
+                (fc) => fc.city.toLowerCase() === c.toLowerCase()
+              );
+              const colorStyle = feedCity
+                ? CPCB_CITY_STYLES[feedCity.cpcbColorToken]
+                : null;
+
               return (
                 <button
                   key={c}
                   type="button"
                   onClick={() => handleSelectQuickCity(c)}
-                  className={`rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
-                    active
-                      ? 'border-teal-600 bg-teal-50 text-teal-800 font-semibold'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300'
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
+                    colorStyle
+                      ? colorStyle.card
+                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
+                  } ${active ? 'ring-2 ring-slate-900 font-bold' : 'font-medium'}`}
                 >
-                  {c}
+                  {colorStyle && <span className={`h-2 w-2 rounded-full ${colorStyle.dot}`} />}
+                  <span>{c}</span>
+                  {feedCity && (
+                    <span className="text-[10px] opacity-80 font-semibold">
+                      {feedCity.indianAqi}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -417,7 +430,7 @@ export default function App() {
                           {aqi.severity.label}
                         </span>
                         <div className="text-[11px] text-slate-600">
-                          RH {aqi.current.humidityPct}% · Safe {aqi.ventilationWindow.bestStartHour}–{aqi.ventilationWindow.bestEndHour}
+                          India CPCB: <strong className="text-slate-900">{aqi.current.indianAqi ?? aqi.current.usAqi}</strong> ({aqi.current.cpcbCategory ?? aqi.severity.label}) · RH {aqi.current.humidityPct}%
                         </div>
                       </div>
                     </div>

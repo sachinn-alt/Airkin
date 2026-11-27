@@ -3,6 +3,7 @@ import {
   ACTION_CATALOG,
   calculateImpactSummary,
   classifyAqiSeverity,
+  computeIndianCpcbAqi,
   computeInversionRisk,
   findVentilationWindow,
   getDefaultSelectedActionIds,
@@ -27,6 +28,15 @@ const baseProfile: HouseholdProfile = {
 };
 
 describe('impactEngine', () => {
+  it('computes official Indian CPCB NAQI categories across PM2.5 and PM10 breakpoints', () => {
+    expect(computeIndianCpcbAqi(20, 35).category).toBe('Good');
+    expect(computeIndianCpcbAqi(48, 49).category).toBe('Satisfactory');
+    expect(computeIndianCpcbAqi(75, 120).category).toBe('Moderate');
+    expect(computeIndianCpcbAqi(105, 160).category).toBe('Poor');
+    expect(computeIndianCpcbAqi(180, 220).category).toBe('Very Poor');
+    expect(computeIndianCpcbAqi(280, 360).category).toBe('Severe');
+  });
+
   it('classifies AQI severity across WHO/EPA thresholds', () => {
     expect(classifyAqiSeverity(35).level).toBe('good');
     expect(classifyAqiSeverity(85).level).toBe('moderate');

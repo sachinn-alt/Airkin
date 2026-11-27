@@ -1,6 +1,7 @@
 import type {
   ActionChoice,
   AirQualitySnapshot,
+  CpcbAqiInfo,
   HouseholdProfile,
   HourlyAqiPoint,
   ImpactSummary,
@@ -153,6 +154,51 @@ export const ACTION_CATALOG: ActionChoice[] = [
     recommendedFor: 'Neighborhoods, parent groups, community organizers',
   },
 ];
+
+function linearInterpolateAqi(
+  conc: number,
+  breakpoints: Array<[number, number, number, number]>
+): number {
+  const c = Math.max(0, conc);
+  for (const [cLo, cHi, iLo, iHi] of breakpoints) {
+    if (c <= cHi) {
+      return Math.round(((iHi - iLo) / (cHi - cLo)) * (c - cLo) + iLo);
+    }
+  }
+  return 500;
+}
+
+/**
+ * Computes India's official CPCB National Air Quality Index (NAQI) from PM2.5 and PM10.
+ */
+export function computeIndianCpcbAqi(pm25: number, pm10: number): CpcbAqiInfo {
+  const pm25Sub = linearInterpolateAqi(pm25, [
+    [0, 30, 0, 50],
+    [30, 60, 51, 100],
+    [60, 90, 101, 200],
+    [90, 120, 201, 300],
+    [120, 250, 301, 400],
+    [250, 500, 401, 500],
+  ]);
+
+  const pm10Sub = linearInterpolateAqi(pm10, [
+    [0, 50, 0, 50],
+    [50, 100, 51, 100],
+    [100, 250, 101, 200],
+    [250, 350, 201, 300],
+    [350, 430, 301, 400],
+    [430, 700, 401, 500],
+  ]);
+
+  const aqi = Math.max(pm25Sub, pm10Sub);
+
+  if (aqi <= 50) return { aqi, category: 'Good', colorToken: 'emerald' };
+  if (aqi <= 100) return { aqi, category: 'Satisfactory', colorToken: 'lime' };
+  if (aqi <= 200) return { aqi, category: 'Moderate', colorToken: 'amber' };
+  if (aqi <= 300) return { aqi, category: 'Poor', colorToken: 'orange' };
+  if (aqi <= 400) return { aqi, category: 'Very Poor', colorToken: 'red' };
+  return { aqi, category: 'Severe', colorToken: 'rose' };
+}
 
 export function classifyAqiSeverity(usAqi: number): AirQualitySnapshot['severity'] {
   if (usAqi <= 50) {

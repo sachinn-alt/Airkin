@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Activity, Location } from 'react-iconly';
-import type { IndiaFeedCity, IndiaLiveFeedResponse, IndiaRegion } from '@shared/types';
+import type { CpcbAqiInfo, IndiaLiveFeedResponse, IndiaRegion } from '@shared/types';
 import { SpotlightCard } from './ui/AceternityPrimitives';
 
 interface IndiaLiveFeedProps {
@@ -12,14 +12,50 @@ interface IndiaLiveFeedProps {
 
 const REGIONS: Array<'All' | IndiaRegion> = ['All', 'North', 'West', 'East', 'Central', 'South'];
 
-const AQI_PILL: Record<IndiaFeedCity['severity']['colorToken'], string> = {
-  emerald: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  amber: 'bg-amber-50 text-amber-800 border-amber-200',
-  orange: 'bg-orange-50 text-orange-800 border-orange-200',
-  red: 'bg-red-50 text-red-800 border-red-200',
-  purple: 'bg-purple-50 text-purple-800 border-purple-200',
-  rose: 'bg-rose-50 text-rose-800 border-rose-200',
+export const CPCB_CITY_STYLES: Record<
+  CpcbAqiInfo['colorToken'],
+  { card: string; badge: string; dot: string }
+> = {
+  emerald: {
+    card: 'border-emerald-300/90 bg-emerald-50/85 hover:bg-emerald-50 text-emerald-950',
+    badge: 'bg-emerald-600 text-white border-emerald-700',
+    dot: 'bg-emerald-600',
+  },
+  lime: {
+    card: 'border-lime-300/90 bg-lime-50/85 hover:bg-lime-50 text-lime-950',
+    badge: 'bg-lime-600 text-white border-lime-700',
+    dot: 'bg-lime-600',
+  },
+  amber: {
+    card: 'border-amber-300/90 bg-amber-50/85 hover:bg-amber-50 text-amber-950',
+    badge: 'bg-amber-600 text-white border-amber-700',
+    dot: 'bg-amber-600',
+  },
+  orange: {
+    card: 'border-orange-300/90 bg-orange-50/85 hover:bg-orange-50 text-orange-950',
+    badge: 'bg-orange-600 text-white border-orange-700',
+    dot: 'bg-orange-600',
+  },
+  red: {
+    card: 'border-red-300/90 bg-red-50/85 hover:bg-red-50 text-red-950',
+    badge: 'bg-red-600 text-white border-red-700',
+    dot: 'bg-red-600',
+  },
+  rose: {
+    card: 'border-rose-400/90 bg-rose-100/80 hover:bg-rose-100 text-rose-950',
+    badge: 'bg-rose-700 text-white border-rose-800',
+    dot: 'bg-rose-700',
+  },
 };
+
+const CPCB_LEGEND: Array<{ label: string; range: string; token: CpcbAqiInfo['colorToken'] }> = [
+  { label: 'Good', range: '0–50', token: 'emerald' },
+  { label: 'Satisfactory', range: '51–100', token: 'lime' },
+  { label: 'Moderate', range: '101–200', token: 'amber' },
+  { label: 'Poor', range: '201–300', token: 'orange' },
+  { label: 'Very Poor', range: '301–400', token: 'red' },
+  { label: 'Severe', range: '401+', token: 'rose' },
+];
 
 export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedProps) {
   const [region, setRegion] = useState<'All' | IndiaRegion>('All');
@@ -30,18 +66,18 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
     const base =
       region === 'All' ? feed.cities : feed.cities.filter((c) => c.region === region);
     return [...base].sort((a, b) =>
-      sortBy === 'aqi_desc' ? b.usAqi - a.usAqi : a.usAqi - b.usAqi
+      sortBy === 'aqi_desc' ? b.indianAqi - a.indianAqi : a.indianAqi - b.indianAqi
     );
   }, [feed, region, sortBy]);
 
   if (!feed) {
     return (
-      <div className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white p-4" />
+      <div className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white/80 p-4" />
     );
   }
 
   return (
-    <SpotlightCard className="p-4 space-y-3">
+    <SpotlightCard className="p-4" contentClassName="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -49,17 +85,19 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
           </span>
           <div>
             <h2 className="text-sm font-semibold text-slate-900">
-              All-India Live Weather & Smog Feed ({feed.cities.length} Cities)
+              All-India Live Weather & Public CPCB AQI Feed ({feed.cities.length} Cities)
             </h2>
             <p className="text-[11px] text-slate-500">
-              Click any city to load its tailored Gemini plan ·{' '}
-              {feed.source === 'open-meteo-live' ? 'Live Open-Meteo Telemetry' : 'Offline India Presets'}
+              Color-coded by India CPCB NAQI ·{' '}
+              {feed.source === 'open-meteo-live'
+                ? 'Live Station & Satellite Assimilation'
+                : 'Offline India Presets'}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+          <div className="inline-flex flex-wrap rounded-lg border border-slate-200 bg-slate-100 p-0.5">
             {REGIONS.map((r) => (
               <button
                 key={r}
@@ -82,15 +120,34 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
             onClick={() => setSortBy((s) => (s === 'aqi_desc' ? 'aqi_asc' : 'aqi_desc'))}
             className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700 hover:border-teal-400 cursor-pointer"
           >
-            {sortBy === 'aqi_desc' ? 'Sort: Highest AQI' : 'Sort: Cleanest First'}
+            {sortBy === 'aqi_desc' ? 'Highest AQI' : 'Cleanest First'}
           </button>
         </div>
       </div>
 
-      {/* Horizontal / Compact Grid of Live Indian Cities */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      {/* Compact Indian CPCB AQI Color Legend */}
+      <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-600">
+        {CPCB_LEGEND.map((item) => {
+          const style = CPCB_CITY_STYLES[item.token];
+          return (
+            <span
+              key={item.label}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-white/80 px-2 py-0.5"
+            >
+              <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+              <strong className="text-slate-800">{item.label}</strong>
+              <span className="text-slate-400">{item.range}</span>
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Color-Coded Indian City Tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
         {filtered.map((item) => {
           const isCurrent = item.city.toLowerCase() === activeCity.toLowerCase();
+          const style = CPCB_CITY_STYLES[item.cpcbColorToken];
+
           return (
             <motion.button
               key={item.city}
@@ -99,34 +156,31 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
               type="button"
               onClick={() => onSelectCity(item.city)}
               aria-pressed={isCurrent}
-              className={`rounded-xl border p-2.5 text-left transition cursor-pointer ${
-                isCurrent
-                  ? 'border-teal-600 bg-teal-50/70 shadow-xs'
-                  : 'border-slate-200 bg-slate-50/60 hover:border-slate-300 hover:bg-white'
+              className={`rounded-xl border p-2.5 text-left transition cursor-pointer ${style.card} ${
+                isCurrent ? 'ring-2 ring-slate-900 ring-offset-1 shadow-sm' : ''
               }`}
             >
               <div className="flex items-center justify-between gap-1">
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 truncate">
-                  <Location set="light" size={12} primaryColor="#0f766e" />
+                <span className="inline-flex items-center gap-1 text-xs font-bold truncate">
+                  <Location set="light" size={11} />
                   {item.city}
                 </span>
                 <span
-                  className={`rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${
-                    AQI_PILL[item.severity.colorToken]
-                  }`}
+                  className={`rounded-md border px-1.5 py-0.5 text-[10px] font-extrabold ${style.badge}`}
+                  title={`India CPCB NAQI ${item.indianAqi} (${item.cpcbCategory}) · US AQI ${item.usAqi}`}
                 >
-                  {item.usAqi}
+                  {item.indianAqi}
                 </span>
               </div>
 
-              <div className="mt-1 flex items-center justify-between text-[10px] text-slate-600">
-                <span className="truncate">{item.weatherLabel}</span>
-                <span className="font-semibold text-slate-800">{item.temperatureC}°C</span>
+              <div className="mt-1 flex items-center justify-between text-[10px] font-medium opacity-85">
+                <span className="truncate">{item.cpcbCategory}</span>
+                <span>{item.temperatureC}°C</span>
               </div>
 
-              <div className="mt-0.5 flex items-center justify-between text-[10px] text-slate-500">
-                <span>PM2.5 {item.pm25}</span>
-                <span>{item.windSpeedKmh} km/h</span>
+              <div className="mt-0.5 flex items-center justify-between text-[10px] opacity-75">
+                <span className="truncate">{item.weatherLabel}</span>
+                <span>{item.windSpeedKmh}k</span>
               </div>
             </motion.button>
           );

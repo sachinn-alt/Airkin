@@ -44,6 +44,12 @@ export interface VentilationWindow {
   advisory: string;
 }
 
+export interface CpcbAqiInfo {
+  aqi: number;
+  category: 'Good' | 'Satisfactory' | 'Moderate' | 'Poor' | 'Very Poor' | 'Severe';
+  colorToken: 'emerald' | 'lime' | 'amber' | 'orange' | 'red' | 'rose';
+}
+
 export interface AirQualitySnapshot {
   city: string;
   country: string;
@@ -59,6 +65,9 @@ export interface AirQualitySnapshot {
     so2: number;
     o3: number;
     usAqi: number;
+    indianAqi?: number;
+    cpcbCategory?: CpcbAqiInfo['category'];
+    cpcbColorToken?: CpcbAqiInfo['colorToken'];
     europeanAqi: number;
     temperatureC: number;
     windSpeedKmh: number;
@@ -160,6 +169,9 @@ export interface IndiaFeedCity {
   latitude: number;
   longitude: number;
   usAqi: number;
+  indianAqi: number;
+  cpcbCategory: CpcbAqiInfo['category'];
+  cpcbColorToken: CpcbAqiInfo['colorToken'];
   pm25: number;
   pm10: number;
   temperatureC: number;

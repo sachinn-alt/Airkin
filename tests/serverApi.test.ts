@@ -89,19 +89,24 @@ describe('AirKin API & GenAI Decision Engine', () => {
   });
 
   it('restricts preset hotspots to Indian cities and returns all-India live feed', async () => {
-    expect(INDIAN_CITY_PRESETS.length).toBeGreaterThanOrEqual(15);
+    expect(INDIAN_CITY_PRESETS.length).toBeGreaterThanOrEqual(30);
     expect(INDIAN_CITY_PRESETS.every((c) => c.country === 'India')).toBe(true);
     expect(mapWeatherCode(45)).toBe('Winter Fog / Mist');
     expect(buildOfflineIndiaFeed().cities.length).toBe(INDIAN_CITY_PRESETS.length);
 
     const res = await fetch(`${baseUrl}/api/india-feed`);
     expect(res.status).toBe(200);
-    const feed = (await res.json()) as { cities: Array<{ region: string; weatherLabel: string }> };
-    expect(feed.cities.length).toBeGreaterThanOrEqual(15);
+    const feed = (await res.json()) as {
+      cities: Array<{ region: string; indianAqi: number; cpcbCategory: string }>;
+    };
+    expect(feed.cities.length).toBeGreaterThanOrEqual(30);
+    expect(feed.cities.every((c) => typeof c.indianAqi === 'number' && Boolean(c.cpcbCategory))).toBe(true);
     const regions = new Set(feed.cities.map((c) => c.region));
     expect(regions.has('North')).toBe(true);
     expect(regions.has('South')).toBe(true);
     expect(regions.has('West')).toBe(true);
+    expect(regions.has('East')).toBe(true);
+    expect(regions.has('Central')).toBe(true);
   });
 
   it('ranks wood heating and filtration interventions higher for high-risk households', () => {

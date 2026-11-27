@@ -29,7 +29,7 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.getByText(/Gemini Flash Active/i)).toBeVisible();
     await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Interactive weather and air quality visual/i })).toBeVisible();
-    await expect(page.getByText(/All-India Live Weather & Smog Feed/i)).toBeVisible();
+    await expect(page.getByText(/All-India Live Weather & Public CPCB AQI Feed \(32 Cities\)/i)).toBeVisible();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
 
@@ -39,7 +39,7 @@ test.describe('AirKin End-to-End Verification', () => {
 
     // 4. Filter All-India Feed to North & switch to Lucknow, verifying chart stability
     await page.getByRole('button', { name: 'North', exact: true }).click();
-    await page.getByRole('button', { name: 'Lucknow', exact: true }).first().click();
+    await page.getByRole('button', { name: /^Lucknow/i }).first().click();
     const chartSvg = page.getByRole('img', { name: /24 hour PM2\.5 chart for Lucknow/i });
     await expect(chartSvg).toBeVisible();
 
