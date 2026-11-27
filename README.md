@@ -9,6 +9,7 @@
 [![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%203.8%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Tests](https://img.shields.io/badge/Vitest-12%2F12%20Passing-10B981?logo=vitest&logoColor=white)](#testing--verification)
 [![Repo Size](https://img.shields.io/badge/Repo%20Size-%3C1%20MB-0EA5E9)](#evaluation-focus-areas)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-airkin.vercel.app-10B981?logo=vercel&logoColor=white)](https://airkin.vercel.app/)
 
 *Navigate severe winter smog with low-emission daily routines, budget-realistic indoor air quality hacks, sustainable alternatives, and transparent physics-backed calculations showing the direct impact of every choice.*
 
