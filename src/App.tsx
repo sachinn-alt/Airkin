@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Activity,
@@ -6,9 +6,7 @@ import {
   Danger,
   Discovery,
   Filter,
-  Location,
   People,
-  Search,
 } from 'react-iconly';
 import {
   calculateImpactSummary,
@@ -67,7 +65,6 @@ const SEVERITY_BADGE_STYLES: Record<AirQualitySnapshot['severity']['colorToken']
 export default function App() {
   const [activePage, setActivePage] = useState<AppPage>('overview');
   const [profile, setProfile] = useState<HouseholdProfile>(INITIAL_PROFILE);
-  const [cityInput, setCityInput] = useState('Delhi');
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>(() =>
     getDefaultSelectedActionIds(INITIAL_PROFILE)
   );
@@ -141,17 +138,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCitySearch = (e: FormEvent) => {
-    e.preventDefault();
-    const cleaned = cityInput.trim();
-    if (!cleaned) return;
-    const updated = { ...profile, city: cleaned };
-    setProfile(updated);
-    void loadCityAndPlan(updated, selectedActionIds);
-  };
-
   const handleSelectQuickCity = (city: string) => {
-    setCityInput(city);
     const updated = { ...profile, city };
     setProfile(updated);
     void loadCityAndPlan(updated, selectedActionIds);
@@ -237,47 +224,59 @@ export default function App() {
         Skip to main dashboard
       </a>
 
-      {/* Compact Floating Pill Header matching scenic valley aesthetic */}
+      {/* Compact Single-Row Floating Pill Header */}
       <header className="sticky top-0 z-30 px-3 sm:px-6">
         <div className="mx-auto max-w-6xl rounded-b-3xl border-x border-b border-emerald-950/10 bg-white/95 backdrop-blur-md shadow-md">
           <div className="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <AirKinMark className="h-8 w-8 shrink-0 rounded-xl shadow-xs" />
-            <div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-900">AirKin</h1>
-              <p className="text-[10px] text-slate-500">All-India Winter Smog Assistant</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <form onSubmit={handleCitySearch} className="flex items-center gap-1.5">
-              <label htmlFor="city-search-input" className="sr-only">
-                Search Indian city for live air quality
-              </label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-2 text-slate-400">
-                  <Location set="light" size={14} />
-                </span>
-                <input
-                  id="city-search-input"
-                  type="text"
-                  value={cityInput}
-                  onChange={(e) => setCityInput(e.target.value)}
-                  placeholder="Any Indian city..."
-                  className="w-40 sm:w-48 rounded-xl border border-slate-300 bg-white pl-8 pr-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400"
-                />
+            <div className="flex items-center gap-2.5 shrink-0">
+              <AirKinMark className="h-8 w-8 shrink-0 rounded-xl shadow-xs" />
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-slate-900">AirKin</h1>
+                <p className="text-[10px] text-slate-500">All-India Winter Smog Assistant</p>
               </div>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-200 transition cursor-pointer"
-              >
-                <Search set="light" size={14} />
-                <span>Go</span>
-              </button>
-            </form>
+            </div>
+
+            <nav
+              aria-label="AirKin Views"
+              className="order-3 lg:order-none w-full lg:w-auto flex justify-center"
+            >
+              <div className="inline-flex flex-wrap justify-center gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = activePage === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActivePage(item.id)}
+                      aria-current={active ? 'page' : undefined}
+                      className={`relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                        active ? 'text-white' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="active-page-pill"
+                          transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                          className="absolute inset-0 rounded-lg bg-teal-700"
+                        />
+                      )}
+                      <span className="relative z-10 inline-flex items-center gap-1.5">
+                        <Icon
+                          set={active ? 'bold' : 'light'}
+                          size={14}
+                          primaryColor={active ? '#ffffff' : '#475569'}
+                        />
+                        <span>{item.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
 
             <span
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium ${
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-medium ${
                 geminiActive
                   ? 'border-teal-200 bg-teal-50 text-teal-800'
                   : 'border-amber-200 bg-amber-50 text-amber-800'
@@ -289,47 +288,6 @@ export default function App() {
               </span>
             </span>
           </div>
-        </div>
-
-          {/* Animated Motion Page Switcher */}
-          <div className="px-4 sm:px-5 pb-2.5 flex justify-center">
-          <nav
-            aria-label="AirKin Views"
-            className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1"
-          >
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = activePage === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActivePage(item.id)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`relative inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
-                    active ? 'text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="active-page-pill"
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className="absolute inset-0 rounded-lg bg-teal-700"
-                    />
-                  )}
-                  <span className="relative z-10 inline-flex items-center gap-1.5">
-                    <Icon
-                      set={active ? 'bold' : 'light'}
-                      size={14}
-                      primaryColor={active ? '#ffffff' : '#475569'}
-                    />
-                    <span>{item.label}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
         </div>
       </header>
 
