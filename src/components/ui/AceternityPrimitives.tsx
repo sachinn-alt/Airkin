@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { animate, motion, useMotionValue } from 'motion/react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn };
 
 interface SpotlightCardProps {
   children: ReactNode;

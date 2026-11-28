@@ -33,6 +33,8 @@ import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
 import { WeatherVisualScene } from './components/WeatherVisualScene';
 import { AnimatedCounter, AqiGaugeRing, SpotlightCard } from './components/ui/AceternityPrimitives';
+import { WeatherCard } from './components/ui/weather-card';
+import { buildWeatherCardProps } from './lib/weatherMapper';
 
 type AppPage = 'overview' | 'simulator' | 'community';
 
@@ -527,7 +529,18 @@ export default function App() {
                 />
               </div>
 
-              <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="lg:col-span-4">
+                  <WeatherCard
+                    {...buildWeatherCardProps(aqi)}
+                    loading={!aqi}
+                    className="rounded-2xl border border-white/80 bg-white/95 backdrop-blur-md shadow-md"
+                  />
+                </div>
+                <div className="lg:col-span-8">
+                  <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
+                </div>
+              </section>
             </motion.div>
           )}
 

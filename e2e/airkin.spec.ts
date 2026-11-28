@@ -39,6 +39,9 @@ test.describe('AirKin End-to-End Verification', () => {
     await page.getByRole('button', { name: 'Map + Grid', exact: true }).click();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
+    await expect(page.locator('[data-slot="weather-card"]')).toBeVisible();
+    await expect(page.getByRole('list', { name: /Hourly forecast/i })).toBeVisible();
+    await expect(page.getByRole('list', { name: /Daily forecast/i })).toBeVisible();
 
     // Interactive scene layer buttons work
     await page.getByRole('button', { name: 'Sanctuary', exact: true }).click();

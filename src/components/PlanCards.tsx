@@ -145,8 +145,8 @@ export function PlanCards({ plan, isLoading, planError }: PlanCardsProps) {
         </div>
       </div>
 
-      {/* 4-Column Interactive Bento Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      {/* 2x2 Interactive Bento Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {plan.recommendations.map((rec) => {
           const meta = CATEGORY_META[rec.category] ?? CATEGORY_META.routine;
           const Icon = meta.icon;
