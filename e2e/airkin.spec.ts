@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 test.describe('AirKin End-to-End Verification', () => {
@@ -78,13 +79,29 @@ test.describe('AirKin End-to-End Verification', () => {
     await page.getByRole('button', { name: /Organize No-Idling School Zones/i }).click();
     expect(await countBadge.innerText()).not.toBe(beforeCountText);
 
-    // 6. Navigate to Page 3: Community & Guide + Hindi Alert Toggle
+    const p2A11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(p2A11y.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
+
+    // 6. Navigate to Page 3: Community & Guide + Hindi Alert & Audio Toggle
     await page.getByRole('button', { name: /Community & Guide/i }).click();
     await expect(page.getByRole('heading', { name: /RWA & School-Group Clean-Air Briefing/i })).toBeVisible();
     await page.getByRole('button', { name: 'हिंदी', exact: true }).click();
     await expect(page.getByText(/मोहल्ला स्वच्छ-हवा अलर्ट/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /हिंदी अलर्ट सुनें/i })).toBeVisible();
+
+    // Run WCAG 2.1 A/AA accessibility scan across main interactive workspace
+    const a11yResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const seriousOrCritical = a11yResults.violations.filter(
+      (v) => v.impact === 'critical' || v.impact === 'serious'
+    );
+    expect(seriousOrCritical).toEqual([]);
 
     // 7. Open Hovering Ask AirKin Coach button & run live Gemini chat
+    const p1A11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(p1A11y.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
+
     await page.getByRole('button', { name: /Open Ask AirKin Coach/i }).click();
     await expect(page.getByRole('heading', { name: /Ask AirKin Coach \(Lucknow\)/i })).toBeVisible();
     const chatInput = page.getByLabel('Ask AirKin a question');

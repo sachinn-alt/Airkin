@@ -29,36 +29,84 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Lightweight per-IP rate limiter for AI endpoints
-const aiRateBuckets = new Map<string, { count: number; resetAt: number }>();
-function checkAiRateLimit(ip: string): boolean {
+// Bounded per-IP rate limiter with stale-bucket pruning for security & memory efficiency
+const MAX_RATE_BUCKETS = 2000;
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+export function checkRateLimit(
+  bucketKey: string,
+  limitPerMinute = 30
+): { allowed: boolean; remaining: number } {
   const now = Date.now();
-  const bucket = aiRateBuckets.get(ip);
-  if (!bucket || bucket.resetAt <= now) {
-    aiRateBuckets.set(ip, { count: 1, resetAt: now + 60_000 });
-    return true;
+  if (rateBuckets.size > MAX_RATE_BUCKETS) {
+    for (const [k, v] of rateBuckets.entries()) {
+      if (v.resetAt <= now) rateBuckets.delete(k);
+    }
+    if (rateBuckets.size > MAX_RATE_BUCKETS) {
+      const oldestKey = rateBuckets.keys().next().value;
+      if (oldestKey) rateBuckets.delete(oldestKey);
+    }
   }
-  if (bucket.count >= 30) return false;
+
+  const bucket = rateBuckets.get(bucketKey);
+  if (!bucket || bucket.resetAt <= now) {
+    rateBuckets.set(bucketKey, { count: 1, resetAt: now + 60_000 });
+    return { allowed: true, remaining: Math.max(0, limitPerMinute - 1) };
+  }
+  if (bucket.count >= limitPerMinute) {
+    return { allowed: false, remaining: 0 };
+  }
   bucket.count += 1;
-  return true;
+  return { allowed: true, remaining: Math.max(0, limitPerMinute - bucket.count) };
+}
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  const custom = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return custom.includes(origin);
 }
 
 export function createApp() {
   const app = express();
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
 
   // Security headers
-  app.use((_req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    );
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     next();
   });
 
-  app.use(cors());
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (isOriginAllowed(origin)) callback(null, true);
+        else callback(null, false);
+      },
+      methods: ['GET', 'POST', 'OPTIONS'],
+    })
+  );
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
     res.json({
       status: 'ok',
       geminiConfiguredOnServer: Boolean(process.env.GEMINI_API_KEY?.trim()),
@@ -68,6 +116,7 @@ export function createApp() {
   });
 
   app.get('/api/presets', (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.json({
       cities: INDIAN_CITY_PRESETS.map((c) => ({
         city: c.city,
@@ -79,13 +128,23 @@ export function createApp() {
 
   app.get('/api/india-feed', async (_req: Request, res: Response) => {
     const feed = await fetchIndiaLiveFeed();
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.json(feed);
   });
 
   app.get('/api/air-quality', async (req: Request, res: Response) => {
+    const rl = checkRateLimit(`aqi:${req.ip || 'local'}`, 60);
+    res.setHeader('X-RateLimit-Limit', '60');
+    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+    if (!rl.allowed) {
+      res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
+      return;
+    }
+
     try {
       const city = validateCityQuery(req.query.city);
       const snapshot = await fetchAirQualityForCity(city);
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
       res.json(snapshot);
     } catch (err) {
       if (err instanceof CityNotFoundError) {
@@ -110,7 +169,11 @@ export function createApp() {
   });
 
   app.post('/api/plan', async (req: Request, res: Response) => {
-    if (!checkAiRateLimit(req.ip || 'local')) {
+    const rl = checkRateLimit(`ai:${req.ip || 'local'}`, 30);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-RateLimit-Limit', '30');
+    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+    if (!rl.allowed) {
       res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
       return;
     }
@@ -140,7 +203,11 @@ export function createApp() {
   });
 
   app.post('/api/chat', async (req: Request, res: Response) => {
-    if (!checkAiRateLimit(req.ip || 'local')) {
+    const rl = checkRateLimit(`ai:${req.ip || 'local'}`, 30);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-RateLimit-Limit', '30');
+    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
+    if (!rl.allowed) {
       res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
       return;
     }

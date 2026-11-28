@@ -103,10 +103,22 @@ export function IndiaAqiMap({ cities, activeCity, onSelectCity }: IndiaAqiMapPro
             return (
               <g
                 key={c.city}
-                className="cursor-pointer"
+                role="button"
+                tabIndex={0}
+                aria-pressed={isCurrent}
+                aria-label={`${c.city}, ${c.state}: India CPCB AQI ${c.indianAqi} (${c.cpcbCategory})`}
+                className="cursor-pointer focus:outline-none"
                 onMouseEnter={() => setHoveredCity(c)}
                 onMouseLeave={() => setHoveredCity(null)}
+                onFocus={() => setHoveredCity(c)}
+                onBlur={() => setHoveredCity(null)}
                 onClick={() => onSelectCity(c.city)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectCity(c.city);
+                  }
+                }}
               >
                 {isCurrent && (
                   <motion.circle

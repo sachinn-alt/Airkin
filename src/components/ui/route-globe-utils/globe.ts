@@ -1,5 +1,4 @@
 import { feature } from 'topojson-client';
-import type { GeometryCollection, Topology } from 'topojson-specification';
 import landAtlas from 'world-atlas/land-110m.json';
 
 export type Vec3 = [number, number, number];
@@ -49,8 +48,14 @@ function makeBBoxRing(ring: number[][]): BBoxRing {
 function getLandPolygons(): LandPolygon[] {
   if (cachedLandPolygons) return cachedLandPolygons;
 
-  const topology = landAtlas as unknown as Topology<{ land: GeometryCollection }>;
-  const geo = feature(topology, topology.objects.land) as unknown as {
+  const topology = landAtlas as unknown as {
+    type: 'Topology';
+    objects: { land: Parameters<typeof feature>[1] };
+  };
+  const geo = feature(
+    topology as unknown as Parameters<typeof feature>[0],
+    topology.objects.land
+  ) as unknown as {
     type: string;
     features?: Array<{ geometry: { type: string; coordinates: unknown } }>;
     geometry?: { type: string; coordinates: unknown };

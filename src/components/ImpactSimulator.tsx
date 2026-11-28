@@ -187,10 +187,11 @@ export function ImpactSimulator({
               max={250}
               step={5}
               value={effectiveHomes}
+              aria-valuetext={`${effectiveHomes} homes saving ${scaledPm25Kg} kg PM2.5 over winter`}
               onChange={(e) => setBlockSliderHomes(Number(e.target.value))}
               className="w-full accent-indigo-700 cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] text-slate-500">
+            <div className="flex justify-between text-[10px] text-slate-600">
               <span>10 homes</span>
               <span>14-week winter scale</span>
               <span>250 homes</span>
@@ -203,11 +204,14 @@ export function ImpactSimulator({
       {hourly.length > 0 && selectedHourPoint && safestHourPoint && (
         <SpotlightCard className="p-3.5" contentClassName="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900">
+            <label
+              htmlFor="commute-hour-slider"
+              className="inline-flex items-center gap-1.5 font-semibold text-slate-900"
+            >
               <TimeCircle set="two-tone" size="small" primaryColor="#0369a1" />
               Commute & School-Run Hour Exposure ({String(leaveHour).padStart(2, '0')}:00)
-            </span>
-            <div className="flex items-center gap-2 text-[11px]">
+            </label>
+            <div className="flex items-center gap-2 text-[11px]" aria-live="polite">
               <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-900">
                 {selectedHourPoint.pm25} µg/m³ outdoor
               </span>
@@ -220,16 +224,18 @@ export function ImpactSimulator({
           </div>
 
           <input
+            id="commute-hour-slider"
             type="range"
             min={0}
             max={Math.max(0, hourly.length - 1)}
             value={leaveHour}
             onChange={(e) => setLeaveHour(Number(e.target.value))}
             aria-label="Select commute or school-run departure hour"
+            aria-valuetext={`${String(leaveHour).padStart(2, '0')}:00 outdoor PM2.5 is ${selectedHourPoint.pm25} micrograms per cubic meter`}
             className="w-full accent-sky-700 cursor-pointer"
           />
 
-          <div className="flex justify-between text-[10px] text-slate-500">
+          <div className="flex justify-between text-[10px] text-slate-600">
             <span>00:00 Midnight</span>
             <span>
               {selectedHourPoint.pm25 > 55
@@ -312,7 +318,7 @@ export function ImpactSimulator({
                     onClick={() => setExpandedInfoId(infoOpen ? null : action.id)}
                     aria-expanded={infoOpen}
                     aria-label={`How ${action.shortLabel} works`}
-                    className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-teal-700 cursor-pointer"
+                    className="shrink-0 rounded-lg p-1 text-slate-600 hover:bg-slate-100 hover:text-teal-800 cursor-pointer"
                   >
                     <InfoCircle set="light" size="small" />
                   </button>

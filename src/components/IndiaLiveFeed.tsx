@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Globe2 } from 'lucide-react';
 import { Activity, Location } from 'react-iconly';
 import type { CpcbAqiInfo, IndiaLiveFeedResponse, IndiaRegion } from '@shared/types';
 import { IndiaAqiMap } from './IndiaAqiMap';
 import { SpotlightCard } from './ui/AceternityPrimitives';
-import { RouteGlobe, type GlobeTheme, type Place } from './ui/route-globe';
+import type { GlobeTheme, Place } from './ui/route-globe';
+
+const LazyRouteGlobe = lazy(() => import('./ui/route-globe'));
 
 const AIRKIN_DAY_GLOBE: GlobeTheme = {
   ground: '#f1f7f4',
@@ -168,7 +170,7 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
             >
               <span className={`h-2 w-2 rounded-full ${style.dot}`} />
               <strong className="text-slate-800">{item.label}</strong>
-              <span className="text-slate-400">{item.range}</span>
+              <span className="text-slate-600">{item.range}</span>
             </span>
           );
         })}
@@ -201,14 +203,22 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
 
           return (
             <div className="relative h-[400px] sm:h-[440px] w-full overflow-hidden rounded-2xl border border-teal-200/80 bg-[#f1f7f4]">
-              <RouteGlobe
-                hub={hubPlace}
-                places={corridorPlaces}
-                theme={AIRKIN_DAY_GLOBE}
-                className="h-full w-full"
-              />
-              <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-white/80 bg-white/88 px-3 py-2 backdrop-blur-md shadow-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-700">
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-xs font-medium text-teal-800">
+                    Loading interactive 3D atmospheric globe...
+                  </div>
+                }
+              >
+                <LazyRouteGlobe
+                  hub={hubPlace}
+                  places={corridorPlaces}
+                  theme={AIRKIN_DAY_GLOBE}
+                  className="h-full w-full"
+                />
+              </Suspense>
+              <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-white/80 bg-white/90 px-3 py-2 backdrop-blur-md shadow-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-800">
                   Atmospheric Corridor · {hubPlace.name} ({corridorPlaces.length} Cities)
                 </p>
                 <p className="text-xs font-bold text-slate-900">

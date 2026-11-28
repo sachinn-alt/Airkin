@@ -65,9 +65,18 @@ afterAll(async () => {
 });
 
 describe('AirKin API & GenAI Decision Engine', () => {
-  it('returns health metadata without leaking secrets', async () => {
-    const res = await fetch(`${baseUrl}/api/health`);
+  it('returns security headers without X-Powered-By and blocks disallowed CORS origins', async () => {
+    const res = await fetch(`${baseUrl}/api/health`, {
+      headers: { Origin: 'https://untrusted-site.example.com' },
+    });
     expect(res.status).toBe(200);
+    expect(res.headers.get('x-powered-by')).toBeNull();
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(res.headers.get('x-frame-options')).toBe('DENY');
+    expect(res.headers.get('cross-origin-opener-policy')).toBe('same-origin');
+    expect(res.headers.get('content-security-policy')).toContain("default-src 'self'");
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe('ok');
     expect(body.geminiConfiguredOnServer).toBe(false);

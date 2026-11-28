@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Activity,
@@ -21,18 +21,25 @@ import type {
 } from '@shared/types';
 import { AdvisorChat } from './components/AdvisorChat';
 import { AmbientWeatherBackdrop } from './components/AmbientWeatherBackdrop';
-import { CommunityGuide } from './components/CommunityGuide';
 import { Footer } from './components/Footer';
-import { ImpactSimulator } from './components/ImpactSimulator';
 import { IndiaLiveFeed } from './components/IndiaLiveFeed';
 import { PlanCards } from './components/PlanCards';
-import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
 import { WeatherVisualScene } from './components/WeatherVisualScene';
 import { AnimatedCounter, AqiGaugeRing, SpotlightCard } from './components/ui/AceternityPrimitives';
 import { AirKinMark } from './components/ui/AirKinMark';
 import { WeatherCard } from './components/ui/weather-card';
 import { buildWeatherCardProps } from './lib/weatherMapper';
+
+const LazyProfilePanel = lazy(() =>
+  import('./components/ProfilePanel').then((m) => ({ default: m.ProfilePanel }))
+);
+const LazyImpactSimulator = lazy(() =>
+  import('./components/ImpactSimulator').then((m) => ({ default: m.ImpactSimulator }))
+);
+const LazyCommunityGuide = lazy(() =>
+  import('./components/CommunityGuide').then((m) => ({ default: m.CommunityGuide }))
+);
 
 type AppPage = 'overview' | 'simulator' | 'community';
 
@@ -466,25 +473,31 @@ export default function App() {
               transition={{ duration: 0.2 }}
               className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start"
             >
-              <div className="lg:col-span-4">
-                <ProfilePanel
-                  profile={profile}
-                  onChange={setProfile}
-                  onRegeneratePlan={() => {
-                    void loadCityAndPlan(profile, selectedActionIds);
-                    setActivePage('overview');
-                  }}
-                  isLoadingPlan={isLoadingPlan}
-                />
-              </div>
-              <div className="lg:col-span-8">
-                <ImpactSimulator
-                  selectedActionIds={selectedActionIds}
-                  onToggleAction={handleToggleAction}
-                  impact={liveImpact}
-                  hourly={aqi?.hourly}
-                />
-              </div>
+              <Suspense
+                fallback={
+                  <div className="lg:col-span-12 h-48 animate-pulse rounded-2xl border border-white/80 bg-white/90 p-4" />
+                }
+              >
+                <div className="lg:col-span-4">
+                  <LazyProfilePanel
+                    profile={profile}
+                    onChange={setProfile}
+                    onRegeneratePlan={() => {
+                      void loadCityAndPlan(profile, selectedActionIds);
+                      setActivePage('overview');
+                    }}
+                    isLoadingPlan={isLoadingPlan}
+                  />
+                </div>
+                <div className="lg:col-span-8">
+                  <LazyImpactSimulator
+                    selectedActionIds={selectedActionIds}
+                    onToggleAction={handleToggleAction}
+                    impact={liveImpact}
+                    hourly={aqi?.hourly}
+                  />
+                </div>
+              </Suspense>
             </motion.div>
           )}
 
@@ -497,7 +510,13 @@ export default function App() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.2 }}
             >
-              <CommunityGuide aqi={aqi} profile={profile} impact={liveImpact} />
+              <Suspense
+                fallback={
+                  <div className="h-48 animate-pulse rounded-2xl border border-white/80 bg-white/90 p-4" />
+                }
+              >
+                <LazyCommunityGuide aqi={aqi} profile={profile} impact={liveImpact} />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>

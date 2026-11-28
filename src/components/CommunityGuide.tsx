@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Volume2, VolumeX } from 'lucide-react';
 import {
   ChevronDown,
   ChevronUp,
@@ -28,9 +29,18 @@ const DIY_STEPS = [
 
 export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
   const [copied, setCopied] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [lang, setLang] = useState<'en' | 'hi'>('en');
   const [checkedDiy, setCheckedDiy] = useState<Record<number, boolean>>({});
   const [showModelMath, setShowModelMath] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const city = aqi?.city ?? profile.city;
   const indianAqi = aqi?.current.indianAqi ?? aqi?.current.usAqi ?? 220;
@@ -69,6 +79,24 @@ export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
     }
   };
 
+  const handleSpeak = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
+    if (isSpeaking) {
+      synth.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(rwaBriefing.replace(/[•|]/g, ', '));
+    utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+    utterance.rate = 0.96;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    synth.speak(utterance);
+  };
+
   const completedCount = Object.values(checkedDiy).filter(Boolean).length;
 
   return (
@@ -87,28 +115,40 @@ export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
               >
                 RWA & School-Group Clean-Air Briefing
               </h2>
-              <p className="text-[11px] text-slate-500">1-click WhatsApp / resident alert for {city}</p>
+              <p className="text-[11px] text-slate-600">1-click WhatsApp / resident alert for {city}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px]">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px]" role="group" aria-label="Briefing Language">
               <button
                 type="button"
-                onClick={() => setLang('en')}
+                onClick={() => {
+                  if (isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    setIsSpeaking(false);
+                  }
+                  setLang('en');
+                }}
                 aria-pressed={lang === 'en'}
                 className={`rounded-md px-2 py-0.5 font-medium cursor-pointer ${
-                  lang === 'en' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                  lang === 'en' ? 'bg-slate-900 text-white' : 'text-slate-700'
                 }`}
               >
                 EN
               </button>
               <button
                 type="button"
-                onClick={() => setLang('hi')}
+                onClick={() => {
+                  if (isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    setIsSpeaking(false);
+                  }
+                  setLang('hi');
+                }}
                 aria-pressed={lang === 'hi'}
                 className={`rounded-md px-2 py-0.5 font-medium cursor-pointer ${
-                  lang === 'hi' ? 'bg-slate-900 text-white' : 'text-slate-600'
+                  lang === 'hi' ? 'bg-slate-900 text-white' : 'text-slate-700'
                 }`}
               >
                 हिंदी
@@ -118,7 +158,28 @@ export function CommunityGuide({ aqi, profile, impact }: CommunityGuideProps) {
             <motion.button
               whileTap={{ scale: 0.97 }}
               type="button"
+              onClick={handleSpeak}
+              aria-pressed={isSpeaking}
+              aria-label={
+                lang === 'hi'
+                  ? isSpeaking
+                    ? 'ऑडियो अलर्ट रोकें'
+                    : 'हिंदी अलर्ट सुनें'
+                  : isSpeaking
+                    ? 'Stop audio briefing'
+                    : 'Listen to English alert aloud'
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 transition cursor-pointer"
+            >
+              {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              <span>{lang === 'hi' ? (isSpeaking ? 'रोकें' : 'सुनें') : (isSpeaking ? 'Stop' : 'Listen')}</span>
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              type="button"
               onClick={handleCopy}
+              aria-live="polite"
               className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-800 transition cursor-pointer"
             >
               {copied ? (

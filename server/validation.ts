@@ -1,3 +1,4 @@
+import { ACTION_CATALOG } from '../shared/impactEngine.js';
 import type {
   AssistantRole,
   CommuteMode,
@@ -7,6 +8,8 @@ import type {
   HouseholdProfile,
   PurifierType,
 } from '../shared/types.js';
+
+const ALLOWED_ACTION_IDS = new Set(ACTION_CATALOG.map((a) => a.id));
 
 const COMMUTE_MODES: CommuteMode[] = [
   'solo_car',
@@ -120,11 +123,11 @@ export function validateProfile(raw: unknown): HouseholdProfile {
 
 export function validateActionIds(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
-  return raw
+  const valid = raw
     .filter((item): item is string => typeof item === 'string')
     .map((item) => sanitizeText(item, 48))
-    .filter(Boolean)
-    .slice(0, 20);
+    .filter((id) => ALLOWED_ACTION_IDS.has(id));
+  return [...new Set(valid)].slice(0, 20);
 }
 
 export function validateChatHistory(
@@ -136,11 +139,11 @@ export function validateChatHistory(
       (msg): msg is { role: unknown; content: unknown } =>
         Boolean(msg) && typeof msg === 'object'
     )
-    .slice(-12)
     .map((msg) => ({
       role: msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
       content: sanitizeText(msg.content, 1500),
     }))
-    .filter((msg) => msg.content.length > 0);
+    .filter((msg) => msg.content.length > 0)
+    .slice(-8);
 }
 
