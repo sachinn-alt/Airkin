@@ -22,9 +22,9 @@ const PIN_FILL: Record<CpcbAqiInfo['colorToken'], string> = {
 const LON_MIN = 67.5;
 const LON_MAX = 98.0;
 const LAT_MIN = 6.5;
-const LAT_MAX = 37.5;
+const LAT_MAX = 37.8;
 const SVG_W = 400;
-const SVG_H = 430;
+const SVG_H = 436;
 const PAD = 16;
 
 function project(lon: number, lat: number): [number, number] {

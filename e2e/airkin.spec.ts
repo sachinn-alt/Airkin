@@ -29,7 +29,7 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.getByText(/Gemini Flash Active/i)).toBeVisible();
     await expect(page.getByRole('img', { name: /24 hour PM2\.5 chart/i })).toBeVisible();
     await expect(page.getByRole('img', { name: /Interactive weather and air quality visual/i })).toBeVisible();
-    await expect(page.getByText(/All-India Live Weather & Public CPCB AQI Feed \(32 Cities\)/i)).toBeVisible();
+    await expect(page.getByText(/All-India Live Weather & Public CPCB AQI Feed \(34 Cities\)/i)).toBeVisible();
     await expect(page.getByRole('img', { name: /Interactive India air quality map/i })).toBeVisible();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
