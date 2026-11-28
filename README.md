@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Gemini](https://img.shields.io/badge/Google%20GenAI-Gemini%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
-[![Vitest](https://img.shields.io/badge/Vitest-30%2F30%20Passing-10B981?logo=vitest&logoColor=white)](#testing--verification)
+[![Vitest](https://img.shields.io/badge/Vitest-32%2F32%20Passing-10B981?logo=vitest&logoColor=white)](#testing--verification)
 [![Playwright](https://img.shields.io/badge/Playwright%20%2B%20Axe-Passing-2EAD33?logo=playwright&logoColor=white)](#testing--verification)
 [![Repo Size](https://img.shields.io/badge/Repo%20Size-%3C1%20MB-0EA5E9)](#evaluation-focus-areas)
 
@@ -113,18 +113,24 @@ flowchart LR
 │   ├── types.ts                             # Shared TypeScript domain contracts
 │   └── impactEngine.ts                      # Mass-balance, CPCB NAQI, inversion & impact engine
 ├── server/
-│   ├── index.ts                             # Hardened Express server, security headers, CORS, rate limit
+│   ├── index.ts                             # Express router wiring health, India feed, AI & impact APIs
+│   ├── middleware.ts                        # Hardened security headers, strict CORS, rate limit & JSON errors
 │   ├── airQualityService.ts                 # India geocoding, 34-city live batch feed, bounded cache
 │   ├── advisorService.ts                    # Context grounding & Google Gemini multi-model retry client
 │   └── validation.ts                        # Allowlisted action IDs, clamping & strict sanitization
 ├── src/
+│   ├── main.tsx                             # Root entrypoint wrapped in accessible ErrorBoundary
 │   ├── App.tsx                              # 3-page lazy-loaded Motion shell & single-row pill header
+│   ├── hooks/
+│   │   └── useAirKinData.ts                 # AbortController API hook & household state management
 │   ├── lib/
 │   │   ├── utils.ts                         # Shared Tailwind class merge utility (cn)
 │   │   └── weatherMapper.ts                 # Live Open-Meteo -> WeatherCard data adapter
 │   ├── data/indiaOutline.ts                 # Composite India GeoJSON polygons (incl. J&K and Ladakh)
 │   └── components/
 │       ├── ui/                              # AirKinMark, SpotlightCard, RouteGlobe, WeatherCard
+│       ├── ErrorBoundary.tsx                # Accessible fallback recovery boundary
+│       ├── OverviewSection.tsx              # Modular Overview bento view (gauge, scene, chart, feed, plan)
 │       ├── AmbientWeatherBackdrop.tsx       # Illustrated alpine valley & atmospheric horizon backdrop
 │       ├── WeatherVisualScene.tsx           # Interactive outdoor / inversion / sanctuary SVG scene
 │       ├── IndiaAqiMap.tsx                  # Keyboard-accessible CPCB color-coded India SVG map
@@ -168,9 +174,9 @@ npm run test:e2e       # Playwright Chromium E2E + automated @axe-core/playwrigh
 
 ## 🛡️ Evaluation Focus Areas
 
-- **Code Quality**: Strict TypeScript (`strict: true`, `noUnusedLocals`, `noUnusedParameters`), cleanly separated `shared/`, `server/`, `src/lib/`, and `src/components/` layers with explicit JSDoc documentation and zero duplicate helpers.
-- **Security**: `X-Powered-By` disabled, `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Strict-Transport-Security`, origin-validated CORS, bounded rate limiting (`X-RateLimit-*`), `100kb` JSON cap, catalog-allowlisted action ID validation, and server-side-only `GEMINI_API_KEY`.
+- **Code Quality**: Strict TypeScript (`strict: true`, `noUnusedLocals`, `noUnusedParameters`) + ESLint 9 (`typescript-eslint`, `react-hooks`, `jsx-a11y` with 0 errors/warnings), modular `hooks/`, `ErrorBoundary`, `middleware.ts`, and `AbortController` request cancellation.
+- **Security**: `X-Powered-By` disabled, `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `Strict-Transport-Security`, origin-validated CORS, bounded rate limiting (`X-RateLimit-*`), `100kb` JSON cap with HTTP 400 syntax error sanitization, catalog-allowlisted action ID validation, and server-side-only `GEMINI_API_KEY`.
 - **Efficiency**: Route/page & 3D Globe lazy code splitting (`React.lazy` + `Suspense`), separated vendor chunks (`vite.config.ts`), HTTP `Cache-Control` headers, 10-minute batched 34-city Open-Meteo cache, and `<1ms` client-side impact simulation.
-- **Testing**: `30` Vitest unit, validation, security header, geometry, and React Testing Library component tests with V8 coverage reporting plus Playwright Chromium E2E against both localhost and live Vercel.
+- **Testing**: `32` Vitest unit, validation, security header, `ErrorBoundary`, geometry, and React Testing Library DOM tests (`npm run test:coverage`) plus Playwright Chromium E2E against both localhost and live Vercel.
 - **Accessibility**: Verified zero critical/serious WCAG 2.1 Level A/AA violations via `@axe-core/playwright` across all 3 pages, keyboard-navigable SVG map pins (`Enter`/`Space`), English + Hindi audio read-aloud (`SpeechSynthesis`), `aria-valuetext` range sliders, high-contrast labels, `aria-live` updates, and `prefers-reduced-motion` support.
 - **Repository Hygiene**: Single branch (`main`), clean `.gitignore`, total tracked size `< 1 MB`.

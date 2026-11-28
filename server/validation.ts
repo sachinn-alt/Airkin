@@ -46,10 +46,12 @@ function clampInt(val: unknown, fallback: number, min: number, max: number): num
 
 export function sanitizeText(input: unknown, maxLen = 120): string {
   if (typeof input !== 'string') return '';
-  return input
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-    .trim()
-    .slice(0, maxLen);
+  let cleaned = '';
+  for (let i = 0; i < input.length; i++) {
+    const code = input.charCodeAt(i);
+    cleaned += code < 32 || code === 127 ? ' ' : input[i];
+  }
+  return cleaned.trim().slice(0, maxLen);
 }
 
 export function validateCityQuery(city: unknown): string {

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import dns from 'node:dns';
 dns.setDefaultResultOrder('ipv4first');
 import cors from 'cors';
-import express, { type NextFunction, type Request, type Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,12 @@ import {
   INDIAN_CITY_PRESETS,
 } from './airQualityService.js';
 import {
+  apiErrorHandler,
+  createRateLimiter,
+  securityHeadersMiddleware,
+  STRICT_CORS_OPTIONS,
+} from './middleware.js';
+import {
   sanitizeText,
   validateActionIds,
   validateChatHistory,
@@ -29,81 +35,33 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Bounded per-IP rate limiter with stale-bucket pruning for security & memory efficiency
-const MAX_RATE_BUCKETS = 2000;
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-
-export function checkRateLimit(
-  bucketKey: string,
-  limitPerMinute = 30
-): { allowed: boolean; remaining: number } {
-  const now = Date.now();
-  if (rateBuckets.size > MAX_RATE_BUCKETS) {
-    for (const [k, v] of rateBuckets.entries()) {
-      if (v.resetAt <= now) rateBuckets.delete(k);
+async function resolveCityAqi(city: string, res: Response) {
+  try {
+    return await fetchAirQualityForCity(city);
+  } catch (err) {
+    if (err instanceof CityNotFoundError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return null;
     }
-    if (rateBuckets.size > MAX_RATE_BUCKETS) {
-      const oldestKey = rateBuckets.keys().next().value;
-      if (oldestKey) rateBuckets.delete(oldestKey);
-    }
+    throw err;
   }
-
-  const bucket = rateBuckets.get(bucketKey);
-  if (!bucket || bucket.resetAt <= now) {
-    rateBuckets.set(bucketKey, { count: 1, resetAt: now + 60_000 });
-    return { allowed: true, remaining: Math.max(0, limitPerMinute - 1) };
-  }
-  if (bucket.count >= limitPerMinute) {
-    return { allowed: false, remaining: 0 };
-  }
-  bucket.count += 1;
-  return { allowed: true, remaining: Math.max(0, limitPerMinute - bucket.count) };
 }
 
-function isOriginAllowed(origin: string | undefined): boolean {
-  if (!origin) return true;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
-  const custom = (process.env.CORS_ORIGINS || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return custom.includes(origin);
-}
-
+/**
+ * Builds and configures the AirKin Express application with hardened security headers,
+ * origin-validated CORS, bounded rate limiting, and API routes.
+ */
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
 
-  // Security headers
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    );
-    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
-      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    }
-    next();
-  });
-
-  app.use(
-    cors({
-      origin(origin, callback) {
-        if (isOriginAllowed(origin)) callback(null, true);
-        else callback(null, false);
-      },
-      methods: ['GET', 'POST', 'OPTIONS'],
-    })
-  );
+  app.use(securityHeadersMiddleware);
+  app.use(cors(STRICT_CORS_OPTIONS));
   app.use(express.json({ limit: '100kb' }));
+
+  const aqiRateLimit = createRateLimiter('aqi', 60);
+  const aiRateLimit = createRateLimiter('ai', 30);
 
   app.get('/api/health', (_req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -132,30 +90,19 @@ export function createApp() {
     res.json(feed);
   });
 
-  app.get('/api/air-quality', async (req: Request, res: Response) => {
-    const rl = checkRateLimit(`aqi:${req.ip || 'local'}`, 60);
-    res.setHeader('X-RateLimit-Limit', '60');
-    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
-    if (!rl.allowed) {
-      res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
-      return;
-    }
-
+  app.get('/api/air-quality', aqiRateLimit, async (req: Request, res: Response) => {
     try {
       const city = validateCityQuery(req.query.city);
-      const snapshot = await fetchAirQualityForCity(city);
+      const snapshot = await resolveCityAqi(city, res);
+      if (!snapshot) return;
       res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
       res.json(snapshot);
-    } catch (err) {
-      if (err instanceof CityNotFoundError) {
-        res.status(err.statusCode).json({ error: err.message });
-        return;
-      }
+    } catch {
       res.status(500).json({ error: 'Unable to fetch air quality data.' });
     }
   });
 
-  app.post('/api/impact/calculate', async (req: Request, res: Response) => {
+  app.post('/api/impact/calculate', (req: Request, res: Response) => {
     const profile = validateProfile(req.body?.profile);
     const outdoorPm25 =
       typeof req.body?.outdoorPm25 === 'number' && Number.isFinite(req.body.outdoorPm25)
@@ -168,28 +115,13 @@ export function createApp() {
     res.json(calculateImpactSummary(profile, outdoorPm25, ids));
   });
 
-  app.post('/api/plan', async (req: Request, res: Response) => {
-    const rl = checkRateLimit(`ai:${req.ip || 'local'}`, 30);
+  app.post('/api/plan', aiRateLimit, async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-RateLimit-Limit', '30');
-    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
-    if (!rl.allowed) {
-      res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
-      return;
-    }
     const profile = validateProfile(req.body?.profile);
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
 
-    let aqi;
-    try {
-      aqi = await fetchAirQualityForCity(profile.city);
-    } catch (err) {
-      if (err instanceof CityNotFoundError) {
-        res.status(err.statusCode).json({ error: err.message });
-        return;
-      }
-      throw err;
-    }
+    const aqi = await resolveCityAqi(profile.city, res);
+    if (!aqi) return;
 
     try {
       const plan = await generateTailoredPlan(profile, aqi, selectedActionIds);
@@ -202,16 +134,8 @@ export function createApp() {
     }
   });
 
-  app.post('/api/chat', async (req: Request, res: Response) => {
-    const rl = checkRateLimit(`ai:${req.ip || 'local'}`, 30);
+  app.post('/api/chat', aiRateLimit, async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-RateLimit-Limit', '30');
-    res.setHeader('X-RateLimit-Remaining', String(rl.remaining));
-    if (!rl.allowed) {
-      res.status(429).json({ error: 'Too many requests. Please wait a minute.' });
-      return;
-    }
-
     const question = sanitizeText(req.body?.question, 1000);
     if (!question) {
       res.status(400).json({ error: 'Please enter a non-empty question.' });
@@ -222,16 +146,8 @@ export function createApp() {
     const selectedActionIds = validateActionIds(req.body?.selectedActionIds);
     const history = validateChatHistory(req.body?.history);
 
-    let aqi;
-    try {
-      aqi = await fetchAirQualityForCity(profile.city);
-    } catch (err) {
-      if (err instanceof CityNotFoundError) {
-        res.status(err.statusCode).json({ error: err.message });
-        return;
-      }
-      throw err;
-    }
+    const aqi = await resolveCityAqi(profile.city, res);
+    if (!aqi) return;
 
     try {
       const result = await generateChatReply({
@@ -250,7 +166,6 @@ export function createApp() {
     }
   });
 
-  // Serve built frontend in production if dist/ exists
   const distDir = path.resolve(__dirname, '../../dist');
   if (fs.existsSync(distDir)) {
     app.use(express.static(distDir));
@@ -259,10 +174,7 @@ export function createApp() {
     });
   }
 
-  app.use((_err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    res.status(500).json({ error: 'Internal server error.' });
-  });
-
+  app.use(apiErrorHandler);
   return app;
 }
 

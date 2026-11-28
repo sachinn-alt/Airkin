@@ -219,4 +219,15 @@ describe('AirKin API & GenAI Decision Engine', () => {
     const data = (await res.json()) as { optimizedIndoorPm25: number; baselineIndoorPm25: number };
     expect(data.optimizedIndoorPm25).toBeLessThan(data.baselineIndoorPm25);
   });
+
+  it('rejects malformed JSON bodies cleanly with HTTP 400 and no stack leakage', async () => {
+    const res = await fetch(`${baseUrl}/api/impact/calculate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{invalid-json',
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error?: string };
+    expect(body.error).toBe('Invalid JSON request body.');
+  });
 });

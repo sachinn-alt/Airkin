@@ -7,6 +7,7 @@ import type { HouseholdProfile, TailoredPlanResponse } from '../shared/types';
 import { buildOfflineIndiaFeed, buildOfflineSnapshot } from '../server/airQualityService';
 import { AdvisorChat } from '../src/components/AdvisorChat';
 import { CommunityGuide } from '../src/components/CommunityGuide';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Footer } from '../src/components/Footer';
 import { ImpactSimulator } from '../src/components/ImpactSimulator';
 import { IndiaAqiMap } from '../src/components/IndiaAqiMap';
@@ -181,5 +182,22 @@ describe('AirKin Accessible UI Components', () => {
     render(<Footer onNavigate={onNavigate} onSelectCity={onSelectCity} />);
     fireEvent.click(screen.getByRole('button', { name: /Launch Impact Simulator/i }));
     expect(onNavigate).toHaveBeenCalledWith('simulator');
+  });
+
+  it('catches rendering exceptions safely inside ErrorBoundary with accessible recovery UI', () => {
+    const BrokenWidget = () => {
+      throw new Error('Synthetic widget failure');
+    };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ErrorBoundary>
+        <BrokenWidget />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/AirKin paused unexpectedly/i);
+    expect(screen.getByRole('button', { name: /Try recovering view/i })).toBeInTheDocument();
+    errorSpy.mockRestore();
   });
 });

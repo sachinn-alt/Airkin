@@ -109,8 +109,8 @@ export function RouteGlobe({
       dpr = 1,
       raf = 0,
       alive = true,
-      visible = true,
-      t0 = performance.now();
+      visible = true;
+    const t0 = performance.now();
     const pins: { p: Place; x: number; y: number; front: boolean }[] = [];
 
     const size = () => {
