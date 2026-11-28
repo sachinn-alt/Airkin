@@ -294,7 +294,7 @@ export default function App() {
         </div>
 
           {/* Animated Motion Page Switcher */}
-          <div className="px-4 sm:px-5 pb-2.5 flex justify-center sm:justify-end">
+          <div className="px-4 sm:px-5 pb-2.5 flex justify-center">
           <nav
             aria-label="AirKin Views"
             className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1"
