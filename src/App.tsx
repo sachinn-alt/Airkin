@@ -245,9 +245,10 @@ export default function App() {
         Skip to main dashboard
       </a>
 
-      {/* Compact Sticky Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+      {/* Compact Floating Pill Header matching scenic valley aesthetic */}
+      <header className="sticky top-0 z-30 px-3 sm:px-6">
+        <div className="mx-auto max-w-6xl rounded-b-3xl border-x border-b border-emerald-950/10 bg-white/95 backdrop-blur-md shadow-md">
+          <div className="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
               <ShieldDone set="two-tone" size="small" />
@@ -300,8 +301,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Color-Coded City Pills + Animated Motion Page Switcher */}
-        <div className="mx-auto max-w-7xl px-4 pb-2 flex flex-wrap items-center justify-between gap-2">
+          {/* Color-Coded City Pills + Animated Motion Page Switcher */}
+          <div className="px-4 sm:px-5 pb-2.5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
             {QUICK_CITIES.map((c) => {
               const active = aqi?.city.toLowerCase() === c.toLowerCase();
@@ -371,6 +372,7 @@ export default function App() {
               );
             })}
           </nav>
+        </div>
         </div>
       </header>
 
