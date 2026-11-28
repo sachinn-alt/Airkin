@@ -32,6 +32,11 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.getByRole('img', { name: /Interactive weather and air quality visual/i })).toBeVisible();
     await expect(page.getByText(/All-India Live Weather & Public CPCB AQI Feed \(34 Cities\)/i)).toBeVisible();
     await expect(page.getByRole('img', { name: /Interactive India air quality map/i })).toBeVisible();
+
+    // Verify 3D RouteGlobe view toggles cleanly & restores Map + Grid
+    await page.getByRole('button', { name: 'globe', exact: true }).click();
+    await expect(page.getByRole('img', { name: /A globe with \d+ atmospheric routes/i })).toBeVisible();
+    await page.getByRole('button', { name: 'Map + Grid', exact: true }).click();
     const planCards = page.locator('section[aria-labelledby="ai-plan-heading"] article');
     await expect(planCards).toHaveCount(4);
 

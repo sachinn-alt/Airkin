@@ -1,9 +1,20 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
+import { Globe2 } from 'lucide-react';
 import { Activity, Location } from 'react-iconly';
 import type { CpcbAqiInfo, IndiaLiveFeedResponse, IndiaRegion } from '@shared/types';
 import { IndiaAqiMap } from './IndiaAqiMap';
 import { SpotlightCard } from './ui/AceternityPrimitives';
+import { RouteGlobe, type GlobeTheme, type Place } from './ui/route-globe';
+
+const AIRKIN_DAY_GLOBE: GlobeTheme = {
+  ground: '#f1f7f4',
+  land: '#0f766e',
+  arc: '#d97706',
+  glow: 'rgb(13 148 136 / 0.16)',
+  text: '#0f172a',
+  muted: '#475569',
+};
 
 interface IndiaLiveFeedProps {
   feed: IndiaLiveFeedResponse | null;
@@ -61,7 +72,7 @@ const CPCB_LEGEND: Array<{ label: string; range: string; token: CpcbAqiInfo['col
 export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedProps) {
   const [region, setRegion] = useState<'All' | IndiaRegion>('All');
   const [sortBy, setSortBy] = useState<'aqi_desc' | 'aqi_asc'>('aqi_desc');
-  const [viewMode, setViewMode] = useState<'split' | 'map' | 'grid'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'map' | 'globe' | 'grid'>('split');
 
   const filtered = useMemo(() => {
     if (!feed) return [];
@@ -100,19 +111,20 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
 
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-            {(['split', 'map', 'grid'] as const).map((mode) => (
+            {(['split', 'map', 'globe', 'grid'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setViewMode(mode)}
                 aria-pressed={viewMode === mode}
-                className={`rounded-md px-2 py-0.5 capitalize font-medium transition cursor-pointer ${
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 capitalize font-medium transition cursor-pointer ${
                   viewMode === mode
                     ? 'bg-slate-900 text-white'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {mode === 'split' ? 'Map + Grid' : mode}
+                {mode === 'globe' && <Globe2 size={11} />}
+                <span>{mode === 'split' ? 'Map + Grid' : mode}</span>
               </button>
             ))}
           </div>
@@ -162,26 +174,70 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
         })}
       </div>
 
-      {/* Map + Color-Coded City Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
-        {(viewMode === 'split' || viewMode === 'map') && (
-          <div className={viewMode === 'map' ? 'lg:col-span-12' : 'lg:col-span-4'}>
-            <IndiaAqiMap
-              cities={filtered}
-              activeCity={activeCity}
-              onSelectCity={onSelectCity}
-            />
-          </div>
-        )}
+      {/* Map / 3D Globe / Color-Coded City Grid */}
+      {viewMode === 'globe' ? (
+        (() => {
+          const hubCity =
+            feed.cities.find((c) => c.city.toLowerCase() === activeCity.toLowerCase()) ??
+            filtered[0] ??
+            feed.cities[0];
+          const hubPlace: Place = hubCity
+            ? {
+                name: hubCity.city,
+                lon: hubCity.longitude,
+                lat: hubCity.latitude,
+                note: `CPCB ${hubCity.indianAqi} · ${hubCity.cpcbCategory}`,
+              }
+            : { name: 'Delhi', lon: 77.21, lat: 28.61 };
+          const corridorPlaces: Place[] = filtered
+            .filter((c) => c.city.toLowerCase() !== hubPlace.name.toLowerCase())
+            .slice(0, 14)
+            .map((c) => ({
+              name: c.city,
+              lon: c.longitude,
+              lat: c.latitude,
+              note: `CPCB ${c.indianAqi} (${c.cpcbCategory}) · ${c.temperatureC}°C`,
+            }));
 
-        {(viewMode === 'split' || viewMode === 'grid') && (
-          <div
-            className={`${
-              viewMode === 'grid' ? 'lg:col-span-12' : 'lg:col-span-8'
-            } grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
-              viewMode === 'grid' ? 'xl:grid-cols-8' : 'xl:grid-cols-4'
-            } gap-2 content-start`}
-          >
+          return (
+            <div className="relative h-[400px] sm:h-[440px] w-full overflow-hidden rounded-2xl border border-teal-200/80 bg-[#f1f7f4]">
+              <RouteGlobe
+                hub={hubPlace}
+                places={corridorPlaces}
+                theme={AIRKIN_DAY_GLOBE}
+                className="h-full w-full"
+              />
+              <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-white/80 bg-white/88 px-3 py-2 backdrop-blur-md shadow-xs">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-700">
+                  Atmospheric Corridor · {hubPlace.name} ({corridorPlaces.length} Cities)
+                </p>
+                <p className="text-xs font-bold text-slate-900">
+                  Drag to spin · Hover destinations for live CPCB AQI
+                </p>
+              </div>
+            </div>
+          );
+        })()
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+          {(viewMode === 'split' || viewMode === 'map') && (
+            <div className={viewMode === 'map' ? 'lg:col-span-12' : 'lg:col-span-4'}>
+              <IndiaAqiMap
+                cities={filtered}
+                activeCity={activeCity}
+                onSelectCity={onSelectCity}
+              />
+            </div>
+          )}
+
+          {(viewMode === 'split' || viewMode === 'grid') && (
+            <div
+              className={`${
+                viewMode === 'grid' ? 'lg:col-span-12' : 'lg:col-span-8'
+              } grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
+                viewMode === 'grid' ? 'xl:grid-cols-8' : 'xl:grid-cols-4'
+              } gap-2 content-start`}
+            >
             {filtered.map((item) => {
               const isCurrent = item.city.toLowerCase() === activeCity.toLowerCase();
               const style = CPCB_CITY_STYLES[item.cpcbColorToken];
@@ -225,7 +281,8 @@ export function IndiaLiveFeed({ feed, activeCity, onSelectCity }: IndiaLiveFeedP
             })}
           </div>
         )}
-      </div>
+        </div>
+      )}
     </SpotlightCard>
   );
 }
