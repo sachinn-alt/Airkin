@@ -9,7 +9,6 @@ import {
   Location,
   People,
   Search,
-  ShieldDone,
 } from 'react-iconly';
 import {
   calculateImpactSummary,
@@ -33,6 +32,7 @@ import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
 import { WeatherVisualScene } from './components/WeatherVisualScene';
 import { AnimatedCounter, AqiGaugeRing, SpotlightCard } from './components/ui/AceternityPrimitives';
+import { AirKinMark } from './components/ui/AirKinMark';
 import { WeatherCard } from './components/ui/weather-card';
 import { buildWeatherCardProps } from './lib/weatherMapper';
 
@@ -242,9 +242,7 @@ export default function App() {
         <div className="mx-auto max-w-6xl rounded-b-3xl border-x border-b border-emerald-950/10 bg-white/95 backdrop-blur-md shadow-md">
           <div className="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 border border-teal-200 text-teal-700">
-              <ShieldDone set="two-tone" size="small" />
-            </span>
+            <AirKinMark className="h-8 w-8 shrink-0 rounded-xl shadow-xs" />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900">AirKin</h1>
               <p className="text-[10px] text-slate-500">All-India Winter Smog Assistant</p>

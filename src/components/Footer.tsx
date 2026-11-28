@@ -1,4 +1,5 @@
 import { Heart, Location, ShieldDone } from 'react-iconly';
+import { AirKinMark } from './ui/AirKinMark';
 
 export type FooterPage = 'overview' | 'simulator' | 'community';
 
@@ -105,9 +106,7 @@ export function Footer({ onNavigate, onSelectCity }: FooterProps) {
           {/* Brand Summary + Pill CTA */}
           <div className="md:col-span-5 space-y-4">
             <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
-                <ShieldDone set="bold" size="small" primaryColor="#ffffff" />
-              </span>
+              <AirKinMark className="h-8 w-8 shrink-0 rounded-xl shadow-xs" />
               <span className="text-sm font-bold tracking-tight text-slate-900">AirKin</span>
             </div>
 
