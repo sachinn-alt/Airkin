@@ -20,6 +20,7 @@ test.describe('AirKin End-to-End Verification', () => {
     await expect(page.getByRole('heading', { name: 'AirKin', level: 1 })).toBeVisible();
     await expect(page.locator('header')).toBeVisible();
     await expect(page.locator('main#main-dashboard')).toBeVisible();
+    await expect(page.locator('footer')).toBeVisible();
 
     // 2. Confirm zero BYOK UI or password inputs exist
     await expect(page.locator('input[type="password"]')).toHaveCount(0);

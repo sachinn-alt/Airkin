@@ -25,6 +25,7 @@ import type {
 import { AdvisorChat } from './components/AdvisorChat';
 import { AmbientWeatherBackdrop } from './components/AmbientWeatherBackdrop';
 import { CommunityGuide } from './components/CommunityGuide';
+import { Footer } from './components/Footer';
 import { ImpactSimulator } from './components/ImpactSimulator';
 import { CPCB_CITY_STYLES, IndiaLiveFeed } from './components/IndiaLiveFeed';
 import { PlanCards } from './components/PlanCards';
@@ -234,10 +235,10 @@ export default function App() {
   ];
 
   return (
-    <div className="relative min-h-screen text-slate-900 pb-20">
+    <div className="relative min-h-screen text-slate-900">
       <AmbientWeatherBackdrop aqi={aqi} />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex min-h-screen flex-col">
       <a
         href="#main-dashboard"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-teal-700 focus:px-3 focus:py-2 focus:text-white focus:font-semibold"
@@ -376,7 +377,7 @@ export default function App() {
         </div>
       </header>
 
-      <main id="main-dashboard" className="mx-auto max-w-7xl px-4 py-4 space-y-4">
+      <main id="main-dashboard" className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 space-y-4">
         {errorMsg && (
           <div
             role="alert"
@@ -518,11 +519,13 @@ export default function App() {
               )}
 
               {/* All-India Live Weather & Smog Feed */}
-              <IndiaLiveFeed
-                feed={indiaFeed}
-                activeCity={aqi?.city ?? profile.city}
-                onSelectCity={handleSelectQuickCity}
-              />
+              <div id="india-live-feed-section">
+                <IndiaLiveFeed
+                  feed={indiaFeed}
+                  activeCity={aqi?.city ?? profile.city}
+                  onSelectCity={handleSelectQuickCity}
+                />
+              </div>
 
               <PlanCards plan={plan} isLoading={isLoadingPlan} planError={planError} />
             </motion.div>
@@ -574,6 +577,8 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      <Footer onNavigate={setActivePage} onSelectCity={handleSelectQuickCity} />
 
       {/* Hovering Floating Ask AirKin Coach */}
       <AdvisorChat
