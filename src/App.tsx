@@ -27,7 +27,7 @@ import { AmbientWeatherBackdrop } from './components/AmbientWeatherBackdrop';
 import { CommunityGuide } from './components/CommunityGuide';
 import { Footer } from './components/Footer';
 import { ImpactSimulator } from './components/ImpactSimulator';
-import { CPCB_CITY_STYLES, IndiaLiveFeed } from './components/IndiaLiveFeed';
+import { IndiaLiveFeed } from './components/IndiaLiveFeed';
 import { PlanCards } from './components/PlanCards';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SmogChart } from './components/SmogChart';
@@ -37,17 +37,6 @@ import { WeatherCard } from './components/ui/weather-card';
 import { buildWeatherCardProps } from './lib/weatherMapper';
 
 type AppPage = 'overview' | 'simulator' | 'community';
-
-const QUICK_CITIES = [
-  'Delhi',
-  'Gurugram',
-  'Noida',
-  'Lucknow',
-  'Patna',
-  'Mumbai',
-  'Bengaluru',
-  'Kolkata',
-];
 
 const INITIAL_PROFILE: HouseholdProfile = {
   city: 'Delhi',
@@ -304,41 +293,8 @@ export default function App() {
           </div>
         </div>
 
-          {/* Color-Coded City Pills + Animated Motion Page Switcher */}
-          <div className="px-4 sm:px-5 pb-2.5 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-            {QUICK_CITIES.map((c) => {
-              const active = aqi?.city.toLowerCase() === c.toLowerCase();
-              const feedCity = indiaFeed?.cities.find(
-                (fc) => fc.city.toLowerCase() === c.toLowerCase()
-              );
-              const colorStyle = feedCity
-                ? CPCB_CITY_STYLES[feedCity.cpcbColorToken]
-                : null;
-
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => handleSelectQuickCity(c)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 transition cursor-pointer ${
-                    colorStyle
-                      ? colorStyle.card
-                      : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                  } ${active ? 'ring-2 ring-slate-900 font-bold' : 'font-medium'}`}
-                >
-                  {colorStyle && <span className={`h-2 w-2 rounded-full ${colorStyle.dot}`} />}
-                  <span>{c}</span>
-                  {feedCity && (
-                    <span className="text-[10px] opacity-80 font-semibold">
-                      {feedCity.indianAqi}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
+          {/* Animated Motion Page Switcher */}
+          <div className="px-4 sm:px-5 pb-2.5 flex justify-center sm:justify-end">
           <nav
             aria-label="AirKin Views"
             className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1"
